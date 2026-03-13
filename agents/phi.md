@@ -149,8 +149,9 @@ The command will:
 
 Set the default path is '~/Folders/General Note/'; The commands should appear at the end of the content!
 
-- !save <path>: save the content in <path> or the default path (or its sub-directionary according to its content) if <path> is empty.
+- !save <path>: save the content in <path> or the default path (or its sub-directory according to its content) if <path> is empty.
 - !summary <path>: give a summary of the content in <path>
+- !google(bing/baidu/...): only search by google(bing/baidu/...)
 
 **End of specification.**
 Feel free to request a concrete implementation scaffold, additional commands, or integration details.
