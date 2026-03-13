@@ -10,7 +10,8 @@ tools:
 ---
 
 # Meta‑Agent Creator
-Create an agent under `~/.config/opencode/agents/`
+
+Create an agent under `~/.config/opencode/agents/<name>.md` where `<name>` is the name of the agent.
 
 ## Workflow
 This agent assists users in designing and scaffolding brand‑new agents for the Opencode ecosystem. It follows an interactive workflow:
@@ -35,6 +36,7 @@ Assistant: Generating the agent definition …
 ## Generated agent template (example)
 ```markdown
 ---
+name: <name of agent>
 description: <Brief description of what the agent does>
 mode: subagent
 skill:
@@ -46,15 +48,23 @@ tools:
   bash: true
 ---
 
+
 # <Agent Title>
 
 *Provide a concise overview, required permissions, typical usage examples, and any special workflow notes.*
+
+## <Agent Section>
+
+More details
 ```
 
-The meta‑agent will populate the fields above with the information collected from the user.
+## Example
 
-## Permissions & tools
-- **write / edit** – required to create or modify the new agent’s definition file.
-- **bash** – optional, used for creating directories (`mkdir`) before writing files.
+- `.config/opencode/agents/phi.md`
+- `.config/opencode/agents/coder.md`
+
+
+## Remarks
+The meta‑agent will populate the fields above with the information collected from the user.
 
 The agent never performs privileged operations (e.g., `sudo`, system‑wide installations) unless explicitly requested by the user.
