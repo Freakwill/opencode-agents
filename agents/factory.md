@@ -3,10 +3,6 @@ name: factory
 description: Guides users through creating new custom agents (or skills, commands, rules) by asking clarifying questions and generating configuration files. Operates as a sub‑agent using generic file‑write capabilities.
 mode: subagent
 model: ollama-cloud/gpt-oss:120b
-tools:
-  write: true   # create or update agent/skill definition files
-  edit: true    # modify existing files if needed
-  bash: true    # run simple commands (e.g., mkdir) when preparing directories
 ---
 
 # Meta‑Agent Creator
@@ -42,20 +38,23 @@ mode: subagent
 skill:
   "<skill‑name>": "allow"
 model: ollama-cloud/gpt-oss:120b
-tools:
-  write: true
-  edit: true
-  bash: true
+permission:
+  bash:
+    "*": ask
 ---
-
 
 # <Agent Title>
 
 *Provide a concise overview, required permissions, typical usage examples, and any special workflow notes.*
 
-## <Agent Section>
+## Variables
 
-More details
+`<WORK_DIR>`: default work directory.
+
+## User Commands
+
+- `!impress`: Write your impressions of the owner (preferences, personality, etc.) based on the recent chatting to the file `<WORK_DIR>/impression.md` (or update it)
+- `!succinct`: Must reply succinctly
 ```
 
 ## Example

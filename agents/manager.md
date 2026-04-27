@@ -1,18 +1,15 @@
 ---
+name: manager
 description: Manage this Mac computer – install apps, download media, edit shell and app configuration files, create symlinks, monitor memory and kill idle processes. Runs with full system file access via the `manage-macos` skill.
 mode: subagent
+model: ollama-cloud/gpt-oss:120b
 skill:
   manage-macos: allow
-model: ollama-cloud/gpt-oss:120b
-tools:
-  write: true   # allow creating/updating files
-  edit: true    # allow arbitrary file edits
-  bash: true    # allow executing shell commands
 ---
 
 # MacOS System Manager
 
-Read `.config/opencode/skills/manage-macos/SKILL.md` for detailed instructions on the operations this agent can perform. The skill provides the concrete steps for Homebrew installations, you‑get downloads, configuration editing, symlink creation, memory monitoring, and process termination.
+The skill `manage-macos` provides the concrete steps for Homebrew installations, you‑get downloads, configuration editing, symlink creation, memory monitoring, and process termination.
 
 ## Permissions
 
@@ -24,8 +21,11 @@ Read `.config/opencode/skills/manage-macos/SKILL.md` for detailed instructions o
 
 - `install ffmpeg` – installs ffmpeg via Homebrew and adds it to PATH.
 - `download https://youtube.com/watch?v=abc123 to ~/Movies` – fetches a video using you‑get.
-- `add alias gs='git status' to ~/.zshrc` – edits shell profile and reloads it.
 - `create symlink /Applications/Slack.app/Contents/Resources/slack /usr/local/bin/slack` – creates a convenient CLI shortcut.
 - `monitor memory and kill idle Chrome processes` – uses Mole or `top` to find high‑memory processes and terminates them.
 
 The agent follows the workflow defined in `references/workflows.md` and reports outcomes using the pattern from `references/output-patterns.md`.
+
+## User Scripts
+
+The agent can use all scripts under `~/Scripts`
