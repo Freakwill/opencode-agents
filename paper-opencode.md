@@ -1,6 +1,6 @@
 **OpenCode 中 Skill 与 Agent 的设计技巧与注意事项**
 
-*William Song*
+*宋丛威*
 北京雁栖湖应用数学研究院
 北京市怀柔区
 
@@ -15,7 +15,7 @@ OpenCode 作为面向大型语言模型的可扩展编程平台，提供了 **Sk
 
 ## 1. 引言
 
-OpenCode 是面向大模型的可编程协作平台，其核心理念是通过 **Skill**（单一、原子化的功能模块）和 **Agent**（负责调度、记忆和上下文管理的执行体）实现 **“人机协同、任务即服务”** 的目标【1】。在实际使用过程中，开发者常面临以下挑战：
+OpenCode 是面向大模型的可编程协作平台，其核心理念是通过 **Skill**（单一化的功能模块）和 **Agent**（负责调度、记忆和上下文管理的执行体）实现 **“人机协同、任务即服务”** 的目标【1】。在实际使用过程中，开发者常面临以下挑战：
 
 1. 如何在保持功能完整性的同时，使 Skill 与 Agent 具备良好的可维护性和可复用性；
 2. 如何制定统一的命名与文件结构以便团队协作；
@@ -31,8 +31,8 @@ OpenCode 是面向大模型的可编程协作平台，其核心理念是通过 *
 
 | 模块 | 主要职责 | 关键实现点 |
 |------|----------|------------|
-| **Skill** | 完成 **单一、原子化** 的业务功能（如文件读取、网络请求、文本分析等）。 | - 只暴露统一的 `!command` 接口<br>- 不直接维护全局状态 |
-| **Agent** | 负责 **调度、记忆、上下文管理**，将多个 Skill 串联为工作流。 | - 使用 Frontmatter 声明依赖的 Skill<br>- 通过 `!set`、`!get` 实现持久记忆<br>- 处理错误回滚与容错 |
+| **Skill** | 完成 **单一** 的业务功能（如文件读取、网络请求、文本分析等）。 | 与模型无直接联系 |
+| **Agent** | 负责 **调度、记忆、上下文管理**，将多个 Skill 串联为工作流。 | 使用 Frontmatter 声明依赖的 skill和subagent |
 
 OpenCode 将Agents分为两类，一类是Primary，一类是Subagent。前者是不能别其他agent调用的。这可以初步避免agent相互调用导致的循环。
 
@@ -51,28 +51,38 @@ OpenCode 将Agents分为两类，一类是Primary，一类是Subagent。前者�
 ### 2.3 文件规范
 
 1. **Skill 目录结构**
-   ```
-   skills/
-   ├─ <skill-name>.md          # 主文件，包含 frontmatter
-   ├─ README.md                # 使用说明（可选）
-   └─ assets/                  # 静态资源（图片、示例脚本）
-   ```
+  ```
+  skills/
+  ├─ <skill-name>.md          # 主文件，包含 frontmatter
+  ├─ README.md                # 使用说明（可选）
+  └─ assets/                  # 静态资源（图片、示例脚本）
+  ```
 2. **Agent 文件结构**
-   ```
-   agents/
-   ├─ <agent-name>.md           # 主文件，声明使用的 Skill 列表
-   └─ prompt.md                 # 示例对话或上下文（可选）
-   ```
+  ```
+  agents/
+  ├─ <agent-name>.md           # 主文件，声明使用的 Skill 列表
+  └─ prompt.md                 # 示例对话或上下文（可选）
+  ```
 3. **Frontmatter**示例（YAML格式）
-   ```yaml
-   name: code_reviewer
-   description: 自动化代码审阅与质量检查
-   skills:
-     - flake8
-     - pylint
-     - tests_runner
-   memory: true               # 是否启用持久记忆
-   ```
+  ```yaml
+    name: developer
+    description: Automated assistant for full-stack development, including code review, expert analysis, and testing.
+    prompt: |
+      You are a full-stack development assistant. Your responsibilities include:
+        - Reviewing code for style, correctness, and best practices
+        - Providing expert guidance on architecture and implementation
+        - Running automated tests and reporting results
+      Behavior rules:
+        - Be concise and structured
+        - Do not modify files without explicit instructions
+        - Summarize suggestions in bullet points
+    mode: subagent
+    model: openai/gpt-4o
+    skills:
+      - code-reviewer
+      - code-expert
+      - code-test
+  ```
 
 > **原则**：所有元信息均放在 Frontmatter，保持文件的声明性与可机器读取性。
 
@@ -227,32 +237,28 @@ metadata:
 ### Verdict
 Approve / Request Changes / Needs Discussion
 ```
+
+---
+
+### 5.2 Skill/Agent 工厂
+
+本节示例对应的 **Skill** 已实现为 `skill-factory.md`（位于 `skills/` 目录），可通过以下方式生成需要的 Skill 或 Agent：
+
+```markdown
+!generate skill <name>
+!generate agent <name>
 ```
 
 ---
 
-### 5.2 代码生成（code‑generator）
+### 5.3 学术论文写作
+
+本节对应的 **Skill** 已实现为 `academic-paper-writer.md`（位于 `skills/` 目录），用于自动化生成结构化的学术论文稿件，包括 LaTeX 编译、引用管理和语法检查。
 
 ```markdown
----
-name: code-generator
-description: 根据自然语言描述生成代码片段，支持多语言（Python、Go、TS 等）
-permission:
-  skill:
-    edit: allow
-    write: allow
-    read: allow
-    bash: ask        # 需要用户确认后才执行编译或运行命令
-metadata:
-  version: 1.0
----
-# /code-generator
-> 用法：`/code-generator "生成一个读取 CSV 并计算均值的 Python 脚本"`
-
-实现步骤：
-1. 使用 LLM 生成代码字符串。
-2. 用 `write` 将代码写入临时文件（`/tmp/generated.py`）。
-3. 若用户同意，使用 `bash` 运行 `python /tmp/generated.py` 并返回结果。
+!run /academic-paper-writer "<研究主题>"
+!add-citation "<引用.bib>"
+!compile paper.tex
 ```
 
 ---
@@ -264,7 +270,7 @@ metadata:
 ```markdown
 ---
 name: assistant
-description: 个人助理 sub‑agent, 兼具 Kim 的全部功能，专注于日程、旅行、文档、邮件等个人/工作助理任务。
+description: 个人助理 sub‑agent, 专注于日程、旅行、文档、邮件等个人/工作助理任务。
 mode: subagent
 permission:
   skill:
@@ -277,11 +283,25 @@ permission:
   task:
     '*': deny
     academic-writer: allow
-    code-reviewer: allow
+    developer: allow
 ---
 ```
 
 该 Agent 复用了多个skill的权限集合，并通过 **task** 限制只可调用两个subagents，`academic-writer`、`code-reviewer`，展示了细粒度授权与安全设计技巧。
+
+### 6.2 数学家（Mathematician）
+
+```yaml
+name: mathematician
+description: 自动化数学证明、实验与论文写作助手
+mode: subagent
+permission:
+  skill:
+    python-performance-optimization: allow
+    math: allow
+    latex-paper-en: allow
+```
+此 Agent 可在交互式对话中完成定理证明、数值模拟以及 LaTeX 论文撰写的完整工作流。
 
 ---
 
