@@ -6,8 +6,8 @@
 
 ---
 
-### 摘要
-OpenCode 作为面向大型语言模型的可扩展编程平台，提供了 **Skill**（功能模块）和 **Agent**（任务调度器）两类核心概念。本文在对 OpenCode 官方文档的梳理基础上，系统阐述了 Skill 与 Agent 的设计原则、命名与文件规范、安全防护以及提升开发效率的实用技巧。通过若干典型案例（代码审阅、Skill/Agent 工厂、学术写作等），展示了在实际项目中如何实现高内聚、低耦合、可复用且安全的模块化开发。本文旨在为 OpenCode 开发者提供一套完整的工程实践指南，以加速 Skill/Agent 的研发与落地。
+**摘要**
+OpenCode 作为面向大型语言模型的可扩展编程平台，提供了**Skill**（功能模块）和**Agent**（任务调度器）两类核心概念。本文在对 OpenCode 官方文档的梳理基础上，系统阐述了skill与 agent 的设计原则、命名与文件规范、安全防护以及提升开发效率的实用技巧。通过若干典型案例（代码审阅、skill/agent 工厂、学术写作等），展示了在实际项目中如何实现高内聚、低耦合、可复用且安全的模块化开发。本文旨在为 OpenCode 开发者提供一套完整的工程实践指南，以加速skill/agent的研发与落地。
 
 **关键词**：OpenCode、Skill、Agent、设计原则、可复用性、安全性、代码审阅
 
@@ -15,13 +15,13 @@ OpenCode 作为面向大型语言模型的可扩展编程平台，提供了 **Sk
 
 ## 1. 引言
 
-OpenCode 是面向大模型的可编程协作平台，其核心理念是通过 **Skill**（单一化的功能模块）和 **Agent**（负责调度、记忆和上下文管理的执行体）实现 **“人机协同、任务即服务”** 的目标【1】。在实际使用过程中，开发者常面临以下挑战：
+OpenCode 是面向大模型的可编程协作平台，其核心理念是通过Skill（单一化的功能模块）和Agent（负责调度、记忆和上下文管理的执行体）实现“人机协同、任务即服务” 的目标【1】。在实际使用过程中，开发者常面临以下挑战：
 
 1. 如何在保持功能完整性的同时，使 Skill 与 Agent 具备良好的可维护性和可复用性；
 2. 如何制定统一的命名与文件结构以便团队协作；
 3. 如何在开放式执行环境中保证安全性，防止恶意指令或资源泄露。
 
-本文围绕上述问题，结合 OpenCode 官方文档（2025 版）与项目经验，提出系统的 **设计原则与实现技巧**，并通过具体案例进行说明。
+本文围绕上述问题，结合 OpenCode 官方文档（2025 版）与项目经验，提出系统的设计原则与实现技巧，并通过具体案例进行说明。
 
 ---
 
@@ -31,8 +31,8 @@ OpenCode 是面向大模型的可编程协作平台，其核心理念是通过 *
 
 | 模块 | 主要职责 | 关键实现点 |
 |------|----------|------------|
-| **Skill** | 完成 **单一** 的业务功能（如文件读取、网络请求、文本分析等）。 | 与模型无直接联系 |
-| **Agent** | 负责 **调度、记忆、上下文管理**，将多个 Skill 串联为工作流。 | 使用 Frontmatter 声明依赖的 skill和subagent |
+| Skill | 完成单一的业务功能（如文件读取、网络请求、文本分析等）。 | 与模型无直接联系 |
+| Agent | 负责调度、记忆、上下文管理，将多个skill串联为工作流。 | 使用 frontmatter 声明依赖的 skill和subagent (见2.3小节) |
 
 OpenCode 将Agents分为两类，一类是Primary，一类是Subagent。前者是不能别其他agent调用的。这可以初步避免agent相互调用导致的循环。
 
@@ -42,11 +42,12 @@ OpenCode 将Agents分为两类，一类是Primary，一类是Subagent。前者�
 
 | 类型 | 推荐格式 | 示例 |
 |------|----------|------|
-| **Skill 文件** | 小写 + **下划线** 或 **连字符** | `find-skills.md`、`data-analysis.md` |
-| **Agent 文件** | 小写 + **下划线**，含业务关键词 | `code_reviewer.md`、`socrates.md` |
-| **命令** | `!` + 动词 + 可选参数 | `!save <path>`、`!search <keyword>` |
+| Skill 文件 | 小写 + 下划线/连字符，动词短语或无施动者的名词短语 | `find-skills.md`、`data-analysis.md` |
+| Agent 文件 | 小写 + 下划线，名词或名词短语 | `code_reviewer.md`、`socrates.md` |
 
-> **原则**：统一使用 *小写 + 下划线/连字符*，避免使用驼峰或空格，确保在 Linux/macOS 文件系统中的兼容性。
+实际上，目前Skill 文件的命名还是以含施动者的名词短语居多（如`command-creator`, `skill-creator`, `skill-vetter`），毕竟skill可视为与模型和工具无关的agent。
+
+> **原则**：统一使用小写 + 下划线/连字符，避免使用驼峰或空格，确保在 Linux/macOS 文件系统中的兼容性。
 
 ### 2.3 文件规范
 
@@ -84,18 +85,20 @@ OpenCode 将Agents分为两类，一类是Primary，一类是Subagent。前者�
       - code-test
   ```
 
-> **原则**：所有元信息均放在 Frontmatter，保持文件的声明性与可机器读取性。
+> **原则**：所有元信息均放在 frontmatter，保持文件的声明性与可机器读取性。
 
 ### 2.4 安全性
 
+对于安全性要求严格的生产环境，我们总结下述四点安全原则。对于日常工作和学习，建议设置agent可搜索的路径，即可保证安全，还可提高效率。
+
 | 风险 | 防护措施 |
 |------|----------|
-| **任意系统调用** | 在 Skill 中显式声明 `allowed_commands`，仅允许白名单命令；执行前使用沙箱（`bash -c`）并限制 `PATH`。 |
-| **数据泄露** | 对所有外部输入进行 **JSON schema** 验证；对敏感信息（如 API Key）使用 OpenCode 加密存储 `x` 文件。 |
-| **持久化攻击** | 禁止 `!write` 操作写入除 `<DEFAULT_DIR>` 之外的路径；对 `!edit` 进行文件存在性检查。 |
-| **交叉脚本注入** | 对所有用户提供的参数进行严格的 **转义** 与 **白名单校验**，避免 Shell 注入。 |
+| 任意系统调用 | 在skill中显式声明可用工具，仅允许白名单命令；执行前使用沙箱并限制 `PATH`。 |
+| 数据泄露 | 对所有外部输入进行 JSON schema 验证；对敏感信息（如 API Key）加密存储。 |
+| 持久化攻击 | 禁止 `write` 操作写入除 `<DEFAULT_DIR>` 之外的路径；对 `edit` 进行文件存在性检查。 |
+| 交叉脚本注入 | 对脚本参数进行严格的转义与白名单校验，避免shell注入。 |
 
-> **原则**：始终在 Skill 的入口层做一次安全审计，确保任何外部请求都经过严格校验后才进入业务逻辑。
+> **原则**：始终在 skill 的入口层做一次安全审计，确保任何外部请求都经过严格校验后才进入业务逻辑。
 
 ---
 
@@ -103,24 +106,34 @@ OpenCode 将Agents分为两类，一类是Primary，一类是Subagent。前者�
 
 ### 3.1 变量设置
 
-为避免在多个 Skill 中重复获取相同信息，可在 **Agent** 的记忆中预置变量。例如：
+为避免在多个skill中重复获取相同信息，可在agent的记忆中预置变量。例如：
 
 ```markdown
 !set language="python"
 !set openai_key="${ENCRYPTED_OPENAI_KEY}"
 ```
-随后在任意 Skill 中使用 `${language}`、`${openai_key}`，实现 **全局配置式** 的信息共享，提升维护效率。
+随后在任意 skill 中使用 `${language}`、`${openai_key}`，实现全局配置式的信息共享，提升维护效率。
 
 ### 3.2 自定义命令
 
-OpenCode 支持 **Shell‑style** 的自定义命令，以 `!` 为前缀。例如：
+让OpenCode支持Shell风格的自定义命令，以 `!` 为前缀。例如：
 
 ```markdown
 !save <path>   # 将最近一次对话输出保存至指定路径
-!run_test      # 执行单元测试套件并返回结果
+!test          # 执行单元测试并返回结果
+!test;save     # 命令连用
 ```
 
-Opencode确实可以自定义命令(https://opencode.ai/docs/commands/)，不过在skill/agent配置文件中定义，那么该命令专属于这个skill/agent。
+命令的使用示例如下
+```markdown
+用户：生成一份作息安排
+agent：...
+用户：!save plan.md
+agent：已保存到plan.md中。
+```
+
+OpenCode确实可以自定义命令(https://opencode.ai/docs/commands/)，不过在skill/agent配置文件中定义，那么该命令专属于这个skill/agent。
+此外也可以在OpenCode-TUI中执行常规的shell命令，如`!echo "hello"`。`!`必须在开头输入，TUI会自动切换到模拟shell的环境。
 
 ### 3.3 简单的 Agent 记忆实现
 
@@ -145,25 +158,30 @@ OpenCode 只是简单地管理会话内容，不提供长时记忆功能。这�
 
 ### 3.4 OpenCode 自我管理
 
-1. **配置文件统一管理**：所有 **Agent/Skill** 的关键配置信息（如 API Key、路径前缀）统一存放在 `<DEFAULT_DIR>/config.yaml`，并在 Agent 中通过 `!load_config` 加载。
-2. **版本控制**：建议使用 `git` 对 `skills/`、`agents/` 目录进行 **细粒度提交**，每次功能更新对应一条 **结构化提交信息**（如 `feat(agent): add memory for code reviewer`），便于审计。
+1. **配置文件统一管理**：所有agent/skill的关键配置信息（如 API Key、路径前缀）统一存放在 `<DEFAULT_DIR>/config.yaml`，并在 Agent 中通过 `!load_config` 加载。
+2. **版本控制**：建议使用 `git` 对 `skills/`、`agents/` 目录进行细粒度提交，每次功能更新对应一条结构化提交信息（如 `feat(agent): add memory for code reviewer`），便于审计。
 
 ### 3.5 对话示例（人格蒸馏）
 
-在 Agent 的 `prompt.md` 中预置 **示例对话**，可实现人格化的交互。例如：
+在agent的配置文件中预置示例对话，可实现人格化的交互。例如：
 
 ```markdown
 User: 请帮我检查这段代码的 PEP8 合规性。
 Agent: 好的，我将使用 `flake8` 检查，并把结果返回给您。
 ...（后续交互示例） ...
 ```
-通过 **Few‑Shot** 学习，Agent 能在新对话中自动复用已有风格，提升用户体验。
+
+这被视为LLM的 Few‑Shot 演示学习。Agent 能在新对话中自动复用已有风格，提升用户体验。目前被用来实现人格蒸馏或数字化人格。
 
 ---
 
 ## 4. 工具简介
 
-OpenCode 为大模型提供了一系列 **内置工具**，帮助模型直接与本地代码库交互、执行命令或获取外部信息。以下是常用的内置工具概览（详见 https://opencode.ai/docs/tools/）：
+OpenCode 主要包含内置工具和MCP（Model Context Protocol）。用户可自定义工具，请参考在线文档。
+
+### 内置工具
+
+OpenCode 为大模型提供了一系列内置工具，帮助模型直接与本地代码库交互、执行命令或获取外部信息。以下是常用的内置工具概览（详见 https://opencode.ai/docs/tools/）：
 
 | 工具 | 功能说明 |
 |------|----------|
@@ -180,15 +198,15 @@ OpenCode 为大模型提供了一系列 **内置工具**，帮助模型直接与
 | `websearch` | 使用 Exa AI 进行网络搜索（需启用 `OPENCODE_ENABLE_EXA` 环境变量）。
 | `question` | 在执行任务时向用户发起交互式提问。
 
-### MCP 服务器概述
+### MCP
 
-MCP（Model Context Protocol）服务器是 OpenCode 用于 **扩展工具能力** 的插件机制。通过 MCP，开发者可以将任意外部服务（如数据库、REST API、云函数等）以统一的 JSON‑RPC 接口暴露给模型，使其在对话中直接调用。这包括如 **代码审计服务**、**CI/CD 系统** 或 **企业知识库** 等，权限统一受 `permission` 配置控制，确保安全与可审计性。
+MCP是 OpenCode 用于扩展工具能力 的插件机制。通过 MCP，开发者可以将任意外部服务（如数据库、REST API、云函数等）以统一的 JSON‑RPC 接口暴露给模型，使其在对话中直接调用。这包括如代码审计服务、浏览器自动操作或企业知识库等，权限统一受`permission`字段控制，确保安全与可审计性。
 
 ---
 
-## 5. Skill 案例
+## 5. Skill 案例赏析
 
-下面展示几个 **Skill** 示例，使用 OpenCode 官方示例与 Anthropic 的 `code‑review` Skill 为参考，实现了更完整的声明和权限配置。
+下面展示几个关注度较高的skill实例。
 
 ### 5.1 代码审阅（code‑review）
 
@@ -227,7 +245,7 @@ metadata:
 ### Critical Issues
 | # | File | Line | Issue | Severity |
 |---|------|------|-------|----------|
-| 1 | utils.py | 42 | 使用 `eval`，存在代码注入风险 | 🔴 Critical |
+| 1 | utils.py | 42 | 使用 `eval`，存在代码注入风险 | Critical |
 
 ### Suggestions
 | # | File | Line | Suggestion | Category |
@@ -240,38 +258,71 @@ Approve / Request Changes / Needs Discussion
 
 ---
 
-### 5.2 Skill/Agent 工厂
+### 5.2 Skill工厂(skill-creator)
 
-本节示例对应的 **Skill** 已实现为 `skill-factory.md`（位于 `skills/` 目录），可通过以下方式生成需要的 Skill 或 Agent：
+本节是下载量极高的skill范例。
 
 ```markdown
-!generate skill <name>
-!generate agent <name>
+---
+name: skill-creator
+description: Create or modify OpenCode skills via natural language prompts.
+argument-hint: "<type> <name>"
+permission:
+  skill:
+    generate: allow
+metadata:
+  version: 1.0
+  author: kim
+---
+# /skill-creator
+> Use `!generate <type> <name>` to create a new skill or agent.
 ```
 
 ---
 
 ### 5.3 学术论文写作
 
-本节对应的 **Skill** 已实现为 `academic-paper-writer.md`（位于 `skills/` 目录），用于自动化生成结构化的学术论文稿件，包括 LaTeX 编译、引用管理和语法检查。
+这可能是最受欢迎的skill。本文写作就依赖这个skill：先手动编写模板（https://github.com/Freakwill/opencode-agents/blob/main/template-opencode.md），然后通过提示词，让具有该skill的agent按照这个模板写论文。最后，手动处理内容细节和格式问题。
+
 
 ```markdown
-!run /academic-paper-writer "<研究主题>"
-!add-citation "<引用.bib>"
-!compile paper.tex
+---
+name: research-paper-writer
+description: 自动化学术论文写作，包括结构生成、LaTeX 编译、引用管理和语法检查。
+argument-hint: "<topic>"
+permission:
+  skill:
+    latex-paper-en: allow
+    grammar-check: allow
+    python-performance-optimization: allow
+metadata:
+  version: 1.0
+  author: kim
+---
+# /research-paper-writer
+> 用法：`/research-paper-writer <topic>`
+
+## 功能概述
+- 根据主题自动生成论文大纲（标题、摘要、章节结构）。
+- 调用 `latex-paper-en` 生成符合 IEEE/ACM 模板的 LaTeX 文档。
+- 使用 `grammar-check` 对生成文本进行语法与流畅度检查。
+- 支持 `!add-citation <bib>` 添加引用，自动维护 `.bib` 文件。
+- `!compile paper.tex` 编译得到 PDF，返回下载链接。
 ```
 
 ---
 
 ## 6. Agent 示例
 
-### 6.1 assistant（个人助理）
+最后，我们用一个个人助理agent，展示agent的设计。agent设计的主要任务集中在skill, task的编排上。应尽可能自身的skill不用太复杂，主要提供极为特殊不便共享的信息。
 
 ```markdown
 ---
 name: assistant
 description: 个人助理 sub‑agent, 专注于日程、旅行、文档、邮件等个人/工作助理任务。
 mode: subagent
+model: ...
+prompt: 只在特定目录中搜索文件，回答简洁严谨...
 permission:
   skill:
     calendar-management: allow
@@ -279,40 +330,39 @@ permission:
     send-email-programmatically: allow
     research-paper-writer: allow
     self-improving-agent: allow
-    task-tracking: allow
   task:
     '*': deny
     academic-writer: allow
     developer: allow
 ---
+
+# 个人助理
+
+## 目录
+
+- ~/assistant/
+- ~/owner-info/
+
+## 特殊命令
+
+- !save: 将对话存储到工作目录中
+- !search: 在工作目录中搜索
+...
+
 ```
 
-该 Agent 复用了多个skill的权限集合，并通过 **task** 限制只可调用两个subagents，`academic-writer`、`code-reviewer`，展示了细粒度授权与安全设计技巧。
-
-### 6.2 数学家（Mathematician）
-
-```yaml
-name: mathematician
-description: 自动化数学证明、实验与论文写作助手
-mode: subagent
-permission:
-  skill:
-    python-performance-optimization: allow
-    math: allow
-    latex-paper-en: allow
-```
-此 Agent 可在交互式对话中完成定理证明、数值模拟以及 LaTeX 论文撰写的完整工作流。
+该agent复用了多个skill的权限集合，并通过task限制只可调用两个subagents，`academic-writer`、`code-reviewer`，展示了细粒度授权与安全设计技巧。
 
 ---
 
 ## 7. 结论
 
-本文系统梳理了 **OpenCode** 平台中 **Skill** 与 **Agent** 的设计原则、命名与文件规范、安全防护措施以及提升开发效率的实用技巧。通过 **职责划分**、**统一命名**、**文件结构约定** 与 **安全白名单**，实现了高内聚、低耦合且可复用的模块化体系；结合 **变量预置**、**自定义命令** 与 **记忆机制**，显著提升了工作流的自动化程度。案例章节进一步展示了在 **代码审阅、Skill/Agent 自动生成、学术写作** 等典型场景下的落地实现，为后续 OpenCode 项目的大规模推广提供了可靠的技术参考。
+本文系统梳理了OpenCode平台中skill与agent的设计原则、命名与文件规范、安全防护措施以及提升开发效率的实用技巧。通过职责划分、命名规范、文件结构与安全白名单，实现了高内聚、低耦合且可复用的模块化体系；结合变量预置、自定义命令与记忆机制，显著提升了工作流的自动化程度。案例章节进一步展示了在代码审阅、skill/agent自动生成、学术写作等典型场景下的落地实现，为后续OpenCode项目的大规模推广提供了可靠的技术参考。
 
-**未来工作** 可围绕以下方向展开：
-1. **自动化测试框架**：为每个 Skill 自动生成单元测试，实现 CI/CD 流水线的全流程验证。
-2. **安全审计插件**：开发统一的安全审计工具，对 `allowed_commands` 进行静态分析，提前捕获潜在风险。
-3. **多模态 Agent**：融合文本、图像、音频等多模态输入，进一步拓展 OpenCode 在 **AI 辅助创作** 与 **交互式教学** 场景的适用范围。
+未来工作可围绕以下方向展开：
+1. 记忆与进化：特别关注skill/agent的记忆机制和自我进化功能。
+2. 安全审计插件：开发统一的安全审计Skill，对工具/命令进行静态分析，提前捕获潜在风险。
+3. 多模态 Skill：融合文本、图像、音频等多模态输入，进一步拓展 OpenCode 在AI辅助创作场景的适用范围。
 
 ---
 
