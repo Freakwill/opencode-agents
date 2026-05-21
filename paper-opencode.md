@@ -116,24 +116,22 @@ OpenCode 将Agents分为两类，一类是Primary，一类是Subagent。前者�
 
 ### 3.2 自定义命令
 
-让OpenCode支持Shell风格的自定义命令，以 `!` 为前缀。例如：
+让OpenCode支持Shell风格的自定义命令，以 `!` 为前缀。为了与普通shell命令相区别，可以写在提示词末尾。例如：
 
 ```markdown
-!save <path>   # 将最近一次对话输出保存至指定路径
+!save <path>   # 将最近一次对话输出（不必显示在TUI中）保存至指定路径
 !test          # 执行单元测试并返回结果
 !test;save     # 命令连用
 ```
 
 命令的使用示例如下
 ```markdown
-用户：生成一份作息安排
-agent：...
-用户：!save plan.md
-agent：已保存到plan.md中。
+用户：生成一份作息安排 !save plan.md
+agent：已经生成一份作息安排，已保存到plan.md中。
 ```
 
 OpenCode确实可以自定义命令(https://opencode.ai/docs/commands/)，不过在skill/agent配置文件中定义，那么该命令专属于这个skill/agent。
-此外也可以在OpenCode-TUI中执行常规的shell命令，如`!echo "hello"`。`!`必须在开头输入，TUI会自动切换到模拟shell的环境。
+此外也可以在OpenCode-TUI中执行常规的shell命令，如`!echo "hello"`。`!`必须在开头输入。此时，TUI会自动切换到模拟shell的环境。
 
 ### 3.3 简单的 Agent 记忆实现
 
