@@ -1,6 +1,6 @@
 **OpenCode 中 Skill 与 Agent 的设计技巧与注意事项**
 
-*宋丛威*
+*William Song*
 北京雁栖湖应用数学研究院
 北京市怀柔区
 
