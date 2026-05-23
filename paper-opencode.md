@@ -15,7 +15,7 @@ OpenCode 作为面向大型语言模型的可扩展编程平台，提供了**Ski
 
 ## 1. 引言
 
-OpenCode 是面向大模型的可编程协作平台，其核心理念是通过Skill（单一化的功能模块）和Agent（负责调度、记忆和上下文管理的执行体）实现“人机协同、任务即服务” 的目标【1】。在实际使用过程中，开发者常面临以下挑战：
+OpenCode 是面向大模型的可编程协作平台【1,2】，其核心理念是通过Skill（单一化的功能模块）【3-7】和Agent（负责调度、记忆和上下文管理的执行体）[8]实现“人机协同、任务即服务” 的目标。在实际使用过程中，开发者常面临以下挑战：
 
 1. 如何在保持功能完整性的同时，使 skill 与 agent 具备良好的可维护性和可复用性；
 2. 如何制定统一的命名与文件结构以便团队协作；
@@ -54,15 +54,20 @@ OpenCode 将agents分为两类，一类是Primary，一类是Subagent。前者�
 1. **Skill 目录结构**
   ```
   skills/
-  ├─ <skill-name>.md          # 主文件，包含 frontmatter
-  ├─ README.md                # 使用说明（可选）
-  └─ assets/                  # 静态资源（图片、示例脚本）
+  └─ <skill-name>             
+      ├─ SKILL.md              # 主文件，包含 frontmatter
+      ├─ assets/               # 静态资源（图片、示例）
+      └─ scripts/              # 脚本
+
   ```
 2. **Agent 文件结构**
   ```
   agents/
-  ├─ <agent-name>.md           # 主文件，声明使用的 Skill 列表
-  └─ prompt.md                 # 示例对话或上下文（可选）
+  └─ <agent-name>.md           # 主文件（包含frontmatter）
+      ├─ Frontmatter           # 头信息，如声明使用的 skill 列表
+      └─ instructions          # Agent 私有的skill
+  prompts/
+  └─ <agent-name>.txt          # Agent的系统提示词
   ```
 3. **Frontmatter**示例（YAML格式）
   ```yaml
@@ -136,7 +141,7 @@ OpenCode确实可以自定义命令(https://opencode.ai/docs/commands/)，不过
 
 ### 3.3 简单的 Agent 记忆实现
 
-OpenCode 只是简单地管理会话内容，不提供长时记忆功能。这需要通过skill实现。这里介绍一种简单的技巧。
+LLM 本身没有像 RNN 那样的隐式循环记忆单元，其“记忆”仅限于当前上下文窗口。OpenCode 这类 Agent 框架负责将会话历史组织成上下文，本身并不内置长时记忆机制。实现该机制的技巧是：设置一个记忆数据库，让agent记录下会话概要，存入库中，下一次启动自动读取。下面是一个简单实例。
 
 ```markdown
 ## 设置记忆的目录结构
@@ -155,7 +160,7 @@ OpenCode 只是简单地管理会话内容，不提供长时记忆功能。这�
 如果用户改变话题，可触发!update。
 ```
 
-上面的skill片段，提供了简单的长时记忆功能。尽管用自然语言就可操纵agent来存储文件，但是处于方便我们为agent提供一些自定义命令。
+上面的skill片段，提供了简单的长时记忆功能。尽管用自然语言就可操纵agent来存储文件，但是处于方便我们为agent提供一些自定义命令。更完备的案例见https://www.skills.sh/sickn33/antigravity-awesome-skills/agent-memory-systems。
 
 ### 3.4 OpenCode 自我管理
 
@@ -163,15 +168,18 @@ OpenCode 只是简单地管理会话内容，不提供长时记忆功能。这�
 
 ### 3.5 对话示例（人格蒸馏）
 
-在agent的配置文件中预置示例对话，可实现人格化的交互。例如：
+在agent的配置文件中预置示例对话，可实现人格化的交互。以下是一个基于古希腊哲学家Socrates“人格蒸馏”的对话示例：
 
 ```markdown
-User: 请帮我检查这段代码的 PEP8 合规性。
-Agent: 好的，我将使用 `flake8` 检查，并把结果返回给您。
-...（后续交互示例） ...
+User: 我认为勇气就是不怕任何危险。
+Agent: （以Socrates的口吻）那么，一个士兵为了抢劫而冲入敌阵，他同样不怕危险，这算不算勇气？
+User: 不算，那只是鲁莽。
+Agent: 所以勇气不仅仅是“不怕”，还需要与“正确判断”结合？请再想想——如果一个人明知前方危险，却因无知而无畏，这能叫勇气吗？
+User: 不能，无知不算勇气。勇气应该是知道危险，但为了正当理由而行动。
+Agent: 很好。那么“正当理由”由谁来判断？你自己，还是城邦的法律，还是神明？我们似乎又走到了一个岔路口……
 ```
 
-这被视为LLM的 Few‑Shot 演示学习。Agent 能在新对话中自动复用已有风格，提升用户体验。目前被用来实现人格蒸馏或数字化人格。
+这被视为基于LLM的 Few‑Shot 非参数学习[9,10]。Agent 能在新对话中自动复用已有风格，提升用户体验。目前被用来实现人格蒸馏或数字化人格。
 
 ---
 
@@ -189,14 +197,11 @@ OpenCode 为大模型提供了一系列内置工具，帮助模型直接与本�
 | `read` | 读取文件内容，支持指定行范围用于大文件。
 | `write` | 创建或覆盖文件（受 `edit` 权限控制）。
 | `edit` | 基于精确字符串替换的文件编辑。
-| `apply_patch` | 应用统一格式的补丁文件，常用于批量修改。
 | `grep` | 使用正则表达式在文件内容中搜索。
 | `glob` | 基于 glob 模式查找文件路径。
 | `skill` | 加载并返回已注册的 Skill（`SKILL.md`）的内容。
-| `todowrite` | 管理任务列表，帮助 LLM 组织多步骤工作流。
 | `webfetch` | 按 URL 拉取网页内容，适用于获取文档或在线资源。
 | `websearch` | 使用 Exa AI 进行网络搜索（需启用 `OPENCODE_ENABLE_EXA` 环境变量）。
-| `question` | 在执行任务时向用户发起交互式提问。
 
 ### MCP
 
@@ -215,16 +220,6 @@ MCP是 OpenCode 用于扩展工具能力 的插件机制。通过 MCP，开发�
 name: code-review
 description: 自动化代码审阅，检查安全、性能、正确性和可维护性
 argument-hint: "<PR URL, diff, 或文件路径>"
-permission:
-  skill:
-    bash: allow          # 用于执行 lint、测试等命令
-    edit: allow          # 允许在报告中插入代码片段
-    read: allow
-    grep: allow
-    webfetch: allow
-metadata:
-  version: 1.0
-  author: claude
 ---
 # /code-review
 > 用法：`/code-review <PR URL 或文件路径>`
@@ -260,22 +255,45 @@ Approve / Request Changes / Needs Discussion
 
 ### 5.2 Skill工厂(skill-creator)
 
-本节是下载量极高的skill范例。
+本节是下载量极高的skill范例。这类用来构造skill的skill可被称为“元skill”。
 
 ```markdown
 ---
 name: skill-creator
-description: Create or modify OpenCode skills via natural language prompts.
-argument-hint: "<type> <name>"
-permission:
-  skill:
-    generate: allow
-metadata:
-  version: 1.0
-  author: kim
+description: 创建新 skill、修改和改进现有 skill，以及衡量 skill 性能。当用户想要从头创建 skill、编辑或优化现有 skill、运行 evals 测试 skill、对 skill 性能进行基准测试，或优化 skill 的描述以提高触发准确性时使用。
 ---
-# /skill-creator
-> Use `!generate <type> <name>` to create a new skill or agent.
+
+# Skill Creator
+
+在较高层次上，创建 skill 的过程如下：
+
+- 决定你希望该 skill 做什么
+- 编写 skill 的草稿
+- 创建测试提示词并运行它们
+- 定性和定量地评估结果
+- 根据反馈重写 skill
+- 重复直到满意
+
+...
+
+## 创建 skill
+
+### 捕获意图
+
+1. 这个 skill 应该让 Claude 能够做什么？
+2. 这个 skill 应该在什么时候触发？
+3. 预期的输出格式是什么？
+
+...
+
+### Skill 的构成
+
+skill-name/
+├── SKILL.md (required)
+└── Bundled Resources (optional)
+    ├── scripts/
+    ├── references/
+    └── assets/
 ```
 
 ---
@@ -370,12 +388,11 @@ permission:
 
 1. OpenCode 官方文档. https://opencode.ai/docs. (2025)
 2. Team, LogNroll. "OpenCode. ai: The Open Source AI Coding Agent Revolutionizing Development| LogNroll." (2026).
-5. Dong, Qingxiu, et al. "A survey on in-context learning." Proceedings of the 2024 conference on empirical methods in natural language processing. 2024.
-2. Agent Skills 平台. https://agentskills.io
+3. Agent Skills 平台. https://agentskills.io
 4. Skills.sh 平台. https://skills.sh/
 5. ClawHub 平台. https://clawhub.ai/
 6. Skill.fish 平台. https://www.skill.fish/
 7. Anthropic Skills 开源库. https://github.com/anthropics/skills
 8. 作者创建的 agents. https://github.com/Freakwill/opencode-agents
-
-
+9. Brown, Tom, et al. "Language models are few-shot learners." Advances in neural information processing systems 33 (2020): 1877-1901.
+10. Dong, Qingxiu, et al. "A survey on in-context learning." Proceedings of the 2024 conference on empirical methods in natural language processing. 2024.
