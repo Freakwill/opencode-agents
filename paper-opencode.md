@@ -9,7 +9,7 @@
 **摘要**
 OpenCode 作为面向大型语言模型的可扩展编程平台，提供了**Skill**（功能模块）和**Agent**（任务调度器）两类核心概念。本文在对 OpenCode 官方文档的梳理基础上，系统阐述了skill与 agent 的设计原则、命名与文件规范、安全防护以及提升开发效率的实用技巧。通过若干典型案例（代码审阅、skill/agent 工厂、学术写作等），展示了在实际项目中如何实现高内聚、低耦合、可复用且安全的模块化开发。本文旨在为 OpenCode 开发者提供一套完整的工程实践指南，以加速skill/agent的研发与落地。
 
-**关键词**：OpenCode、Skill、Agent、设计原则、可复用性、安全性、代码审阅
+**关键词**：OpenCode、Skill、Agent、设计原则、可复用性、安全性
 
 ---
 
@@ -17,7 +17,7 @@ OpenCode 作为面向大型语言模型的可扩展编程平台，提供了**Ski
 
 OpenCode 是面向大模型的可编程协作平台，其核心理念是通过Skill（单一化的功能模块）和Agent（负责调度、记忆和上下文管理的执行体）实现“人机协同、任务即服务” 的目标【1】。在实际使用过程中，开发者常面临以下挑战：
 
-1. 如何在保持功能完整性的同时，使 Skill 与 Agent 具备良好的可维护性和可复用性；
+1. 如何在保持功能完整性的同时，使 skill 与 agent 具备良好的可维护性和可复用性；
 2. 如何制定统一的命名与文件结构以便团队协作；
 3. 如何在开放式执行环境中保证安全性，防止恶意指令或资源泄露。
 
@@ -34,7 +34,7 @@ OpenCode 是面向大模型的可编程协作平台，其核心理念是通过Sk
 | Skill | 完成单一的业务功能（如文件读取、网络请求、文本分析等）。 | 与模型无直接联系 |
 | Agent | 负责调度、记忆、上下文管理，将多个skill串联为工作流。 | 使用 frontmatter 声明依赖的 skill和subagent (见2.3小节) |
 
-OpenCode 将Agents分为两类，一类是Primary，一类是Subagent。前者是不能别其他agent调用的。这可以初步避免agent相互调用导致的循环。
+OpenCode 将agents分为两类，一类是Primary，一类是Subagent。前者是不能被其他agent调用的。这可以初步避免agent相互调用导致的循环。
 
 > **原则**：Skill 只负责业务实现，不参与调度；Agent 只负责调度与记忆，不实现具体业务。此职责分离能够显著提升代码复用率与测试效率。
 
@@ -116,48 +116,50 @@ OpenCode 将Agents分为两类，一类是Primary，一类是Subagent。前者�
 
 ### 3.2 自定义命令
 
-让OpenCode支持Shell风格的自定义命令，以 `!` 为前缀。为了与普通shell命令相区别，可以写在提示词末尾。例如：
+我们为skill/agent设计shell风格的自定义命令，以 `!` 为前缀。例如：
 
 ```markdown
+## 用户自定义命令
 !save <path>   # 将最近一次对话输出（不必显示在TUI中）保存至指定路径
 !test          # 执行单元测试并返回结果
 !test;save     # 命令连用
 ```
 
-命令的使用示例如下
+为了与真正的shell命令相区别，可以写在提示词末尾。其使用示例如下
 ```markdown
 用户：生成一份作息安排 !save plan.md
 agent：已经生成一份作息安排，已保存到plan.md中。
 ```
 
 OpenCode确实可以自定义命令(https://opencode.ai/docs/commands/)，不过在skill/agent配置文件中定义，那么该命令专属于这个skill/agent。
-此外也可以在OpenCode-TUI中执行常规的shell命令，如`!echo "hello"`。`!`必须在开头输入。此时，TUI会自动切换到模拟shell的环境。
+此外，在OpenCode-TUI中可执行常规的shell命令，如`!echo "hello"`。`!`必须在开头输入。此时，TUI会自动切换到模拟shell的环境。本节提供的技巧，仅是通过模拟shell命令方便操作，简化提示词。
 
 ### 3.3 简单的 Agent 记忆实现
 
 OpenCode 只是简单地管理会话内容，不提供长时记忆功能。这需要通过skill实现。这里介绍一种简单的技巧。
 
 ```markdown
-# 设置记忆的目录结构
+## 设置记忆的目录结构
 - 属于特定agent的记忆
-  agent工作目录
-    ├─ 对话内容
-    └─ 对用户的印象
-- 共享记忆
+  agent记忆目录, 如`agent-memory/`
+    ├─ 对话内容, 如`chat-content.md`
+    └─ 对用户的印象, 如`user-impression.md`
+- 共享记忆`shared-memory/`
 
-# 用户自定义命令
-- !init <path>     # 如果没有记忆文件（指定路径<path>，或设置默认路径），则初始化
+## 用户自定义命令
+- !init <path>     # 初始化记忆文件（指定路径<path>，或设置默认路径`agent-memory/`）
 - !load <path>     # 读取记忆，建议在agent启动时自动执行。
 - !update <path>   # 更新记忆，将近期的对话（连同以往的记忆）进行总结存入文档，包括agent对用户的形象
-- !share <path>    # 将记忆共享给所有agent
+- !share <path>    # 将记忆共享给所有agent，即将记忆存入共享记忆目录`shared-memory/`
+
+如果用户改变话题，可触发!update。
 ```
 
 上面的skill片段，提供了简单的长时记忆功能。尽管用自然语言就可操纵agent来存储文件，但是处于方便我们为agent提供一些自定义命令。
 
 ### 3.4 OpenCode 自我管理
 
-1. **配置文件统一管理**：所有agent/skill的关键配置信息（如 API Key、路径前缀）统一存放在 `<DEFAULT_DIR>/config.yaml`，并在 Agent 中通过 `!load_config` 加载。
-2. **版本控制**：建议使用 `git` 对 `skills/`、`agents/` 目录进行细粒度提交，每次功能更新对应一条结构化提交信息（如 `feat(agent): add memory for code reviewer`），便于审计。
+用自然语言配置OpenCode，而不是用命令或者通过TUI手动修改。例如，提示词“配置Ollama API”，那么OpenCode自动将Ollama API
 
 ### 3.5 对话示例（人格蒸馏）
 
@@ -366,12 +368,14 @@ permission:
 
 ## 参考文献
 
-1. OpenCode 使用手册. OpenCode 官方文档. https://opencode.ai/docs. (2025)
-2. 《电脑编程技巧与维护》杂志社. 期刊简介与投稿指南. http://www.yipinqikan.com/gongyejishu/jisuanjizidonghualeiqikan/6765.html. (2025)
-3. Flake8 官方文档. https://flake8.pycqa.org/. (2024)
-4. Pylint 官方文档. https://pylint.org/. (2024)
-5. Pandoc 手册. https://pandoc.org/. (2024)
-6. SymPy 官方文档. https://www.sympy.org/. (2024)
-7. NumPy 与 SciPy. https://numpy.org/、https://scipy.org/. (2024)
-8. OpenAI API 文档. https://platform.openai.com/docs. (2025)
+1. OpenCode 官方文档. https://opencode.ai/docs. (2025)
+2. Team, LogNroll. "OpenCode. ai: The Open Source AI Coding Agent Revolutionizing Development| LogNroll." (2026).
+5. Dong, Qingxiu, et al. "A survey on in-context learning." Proceedings of the 2024 conference on empirical methods in natural language processing. 2024.
+2. Agent Skills 平台. https://agentskills.io
+4. Skills.sh 平台. https://skills.sh/
+5. ClawHub 平台. https://clawhub.ai/
+6. Skill.fish 平台. https://www.skill.fish/
+7. Anthropic Skills 开源库. https://github.com/anthropics/skills
+8. 作者创建的 agents. https://github.com/Freakwill/opencode-agents
+
 
