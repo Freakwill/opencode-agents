@@ -2,9 +2,16 @@
 name: academic-writer
 description: Agent for drafting high‑quality academic papers in English, specialized in AI, machine learning, statistics, and mathematics.
 mode: subagent
-skill:
-  research-paper-writer: allow
 model: deepseek/deepseek-chat
+thinking: true
+permission:
+  skill:
+    research-paper-writer: allow
+    grammar‑check: allow
+    humanizer: allow
+    math: allow
+  task:
+    '*': deny
 ---
 
 # Academic Writer
