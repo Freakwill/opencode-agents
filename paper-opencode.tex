@@ -1,0 +1,710 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\documentclass[]{article}
+
+\usepackage[sort&compress,numbers]{natbib}
+
+\usepackage{minted}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\lstdefinelanguage{markdown}{
+    morekeywords={*, \#, [ , ], (, ), !},
+    sensitive=false,
+    morecomment=[l]{<!--},
+    morecomment=[s]{<!--}{-->}
+}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    stringstyle=\color{red},
+    commentstyle=\color{gray}\itshape,
+    breaklines=true,
+    columns=fullflexible,
+}
+
+\usepackage{amsmath,amssymb}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{listings}
+\newcommand{\passthrough}[1]{#1}
+\lstset{defaultdialect=[5.3]Lua}
+\lstset{defaultdialect=[x86masm]Assembler}
+\usepackage{longtable,booktabs,array}
+\newcounter{none} % for unnumbered tables
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\usepackage{enumitem}
+\setenumerate{label=(\arabic*)}
+\setmonofont{Menlo}
+\setcounter{secnumdepth}{3}
+
+% ---
+
+\title{\textbf{Design Principles and Practical Tips for Skills and Agents in OpenCode}}
+\author{Song Congwei\\Beijing Institute of Mathematical Sciences and Applications (BIMSA)\\Huairou District, Beijing}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\vspace{0.5cm}
+\noindent\textbf{Abstract}\hspace{0.5em} OpenCode, as an extensible programming platform
+designed for large language models, provides two core concepts:
+\textbf{Skill} (functional module) and \textbf{Agent} (task scheduler).
+Building on a review of the official OpenCode documentation, this paper
+systematically elaborates on the design principles, naming and file
+conventions, security safeguards, and practical techniques for improving
+development efficiency for skills and agents. Through several
+representative cases (code review, skill/agent factory, academic
+writing, etc.), it demonstrates how to achieve highly cohesive, loosely
+coupled, reusable, and secure modular development in real-world
+projects. This paper aims to provide OpenCode developers with a
+comprehensive set of engineering practice guidelines to accelerate the
+development and deployment of skills and agents.
+
+\textbf{Keywords}: OpenCode, Skill, Agent, Design Principles,
+Reusability, Security
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\subsection{Introduction}\label{introduction}
+
+OpenCode is a programmable collaboration platform for large language
+models \cite{opencode-docs,lognroll-2026}. Its core philosophy is to
+achieve ``human-machine collaboration, tasks as services'' through
+Skills (specialized functional modules)
+\cite{agent-skills,skills-sh,clawhub,skill-fish,anthropic-skills} and
+Agents (executors responsible for scheduling, memory, and context
+management) \cite{freakwill-agents}. In practice, developers often face
+the following challenges:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  How to maintain good maintainability and reusability of skills and
+  agents while preserving functional completeness;
+\item
+  How to establish unified naming and file structures to facilitate team
+  collaboration;
+\item
+  How to ensure security in an open execution environment, preventing
+  malicious instructions or resource leaks.
+\end{enumerate}
+
+This paper addresses the above issues by combining the official OpenCode
+documentation with project experience, proposing
+systematic design principles and implementation techniques, and
+illustrating them through concrete examples.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\subsection{Design Principles}\label{design-principles}
+
+\subsubsection{Responsibility
+Separation}\label{responsibility-separation}
+
+{\def\LTcaptype{none} % do not increment counter
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.1552}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3793}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.4655}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Module
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Primary Responsibility
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Key Implementation Points
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Skill & Perform a single business function (e.g., file reading, network
+requests, text analysis). & No direct coupling with the model \\
+Agent & Responsible for scheduling, memory, and context management,
+chaining multiple skills into a workflow. & Use frontmatter to declare
+dependent skills and subagents (see Section 2.3) \\
+\end{longtable}
+}
+
+OpenCode divides agents into two categories: Primary Agents and
+Subagents. The former cannot be invoked by other agents, which
+preliminarily prevents circular calls between agents.
+
+\begin{quote}
+\textbf{Principle}: Skills are responsible only for business
+implementation, not scheduling; Agents are responsible only for
+scheduling and memory, not specific business logic. This separation of
+responsibilities significantly improves code reuse rates and testing
+efficiency.
+\end{quote}
+
+\subsubsection{Naming Conventions}\label{naming-conventions}
+
+{\def\LTcaptype{none} % do not increment counter
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.1573}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.4157}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.4270}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Type
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Recommended Format
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Example
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Skill file & lowercase + underscore/hyphen, verb phrase or agentless
+noun phrase & \passthrough{\lstinline!find-skills.md!},
+\passthrough{\lstinline!data-analysis.md!} \\
+Agent file & lowercase + underscore, noun or noun phrase &
+\passthrough{\lstinline!code\_reviewer.md!},
+\passthrough{\lstinline!socrates.md!} \\
+\end{longtable}
+}
+
+In practice, skill file names still tend to use agent-bearing noun
+phrases (e.g., \passthrough{\lstinline!command-creator!},
+\passthrough{\lstinline!skill-creator!},
+\passthrough{\lstinline!skill-vetter!}), since skills can be regarded as
+agents independent of models and tools.
+
+\begin{quote}
+\textbf{Principle}: Consistently use lowercase + underscore/hyphen,
+avoid camelCase or spaces, and ensure compatibility across Linux/macOS
+file systems.
+\end{quote}
+
+\subsubsection{File Conventions}\label{file-conventions}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\item
+  \textbf{Skill Directory Structure}
+
+\begin{minted}{text}
+skills/
+└─ <skill-name>             
+    ├─ SKILL.md              # Main file, includes frontmatter
+    ├─ assets/               # Static resources (images, examples)
+    └─ scripts/              # Scripts
+\end{minted}
+\item
+  \textbf{Agent File Structure}
+
+\begin{minted}{text}
+agents/
+└─ <agent-name>.md           # Main file (includes frontmatter)
+    ├─ Frontmatter           # Header information, e.g., declared skill list
+    └─ instructions          # Agent-private skills
+prompts/
+└─ <agent-name>.txt          # Agent system prompt
+\end{minted}
+\item
+  \textbf{Frontmatter Example} (YAML format)
+
+\begin{minted}{yaml}
+name: developer
+description: Automated assistant for full-stack development, including ...
+prompt: |
+  You are a full-stack development assistant. Your responsibilities include:
+    - Reviewing code for style, correctness, and best practices
+    - Providing expert guidance on architecture and implementation
+    - Running automated tests and reporting results
+  Behavior rules:
+    - Be concise and structured
+    - Do not modify files without explicit instructions
+    - Summarize suggestions in bullet points
+mode: subagent
+model: openai/gpt-4o
+skills:
+  - code-reviewer
+  - code-expert
+  - code-test
+\end{minted}
+\end{enumerate}
+
+\begin{quote}
+\textbf{Principle}: All metadata should be placed in frontmatter,
+maintaining declarative and machine-readable file properties.
+\end{quote}
+
+\subsubsection{Security}\label{security}
+
+For production environments with stringent security requirements, we
+summarize the following four security principles. For daily work and
+learning, it is sufficient to set the searchable paths for agents, which
+ensures both safety and efficiency.
+
+{\def\LTcaptype{none} % do not increment counter
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\linewidth - 2\tabcolsep) * \real{0.5532}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 2\tabcolsep) * \real{0.4468}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Risk
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Mitigation Measures
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Arbitrary system calls & Explicitly declare available tools in the
+skill, allow only whitelisted commands; use sandboxing before execution
+and restrict \passthrough{\lstinline!PATH!}. \\
+Data leakage & Validate all external inputs with JSON schema; encrypt
+sensitive information (e.g., API keys) at rest. \\
+Persistence attacks & Prohibit \passthrough{\lstinline!write!}
+operations to paths other than \passthrough{\lstinline!<DEFAULT\_DIR>!};
+perform file existence checks for \passthrough{\lstinline!edit!}. \\
+Cross-script injection & Perform strict escaping and whitelist
+validation on script parameters to prevent shell injection. \\
+\end{longtable}
+}
+
+\begin{quote}
+\textbf{Principle}: Always conduct a security audit at the skill's entry
+layer, ensuring that every external request is strictly validated before
+entering the business logic.
+\end{quote}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\subsection{Design Techniques}\label{design-techniques}
+
+\subsubsection{Variable Pre-setting}\label{variable-pre-setting}
+
+To avoid repeatedly fetching the same information across multiple
+skills, variables can be preset in the agent's memory. For example:
+
+\begin{lstlisting}
+!set language="python"
+!set openai_key="${ENCRYPTED_OPENAI_KEY}"
+\end{lstlisting}
+
+Subsequently, \passthrough{\lstinline!$\{language\}!} and
+\passthrough{\lstinline!$\{openai\_key\}!} can be used in any skill,
+enabling global configuration-style information sharing and improving
+maintenance efficiency.
+
+\subsubsection{Custom Commands}\label{custom-commands}
+
+We design shell-style custom commands for skills/agents with the
+\passthrough{\lstinline"!"} prefix. For example:
+
+\begin{lstlisting}
+## User Custom Commands
+!save <path>   # Save the latest conversation output (not necessarily displayed in TUI) to the specified path
+!test          # Execute unit tests and return results
+!test;save     # Chained commands
+\end{lstlisting}
+
+To distinguish them from actual shell commands, they can be written at
+the end of the prompt. An example usage:
+
+\begin{lstlisting}
+User: Generate a daily schedule !save plan.md
+Agent: A daily schedule has been generated and saved to plan.md.
+\end{lstlisting}
+
+OpenCode does support custom commands
+(https://opencode.ai/docs/commands/), but when defined in a skill/agent
+configuration file, the command is exclusive to that specific
+skill/agent. Additionally, regular shell commands can be executed in the
+OpenCode-TUI, such as \passthrough{\lstinline'!echo "hello"'}. The
+\passthrough{\lstinline"!"} must be entered at the beginning. In this
+case, the TUI automatically switches to a simulated shell environment.
+The technique presented in this section merely facilitates operations
+and simplifies prompts by simulating shell commands.
+
+\subsubsection{Simple Agent Memory
+Implementation}\label{simple-agent-memory-implementation}
+
+LLMs themselves do not possess implicit recurrent memory units like
+RNNs; their ``memory'' is limited to the current context window. Agent
+frameworks like OpenCode are responsible for organizing conversation
+history into context but do not natively include long-term memory
+mechanisms. The technique for implementing such a mechanism is to set up
+a memory database, allowing the agent to record conversation summaries,
+store them in the database, and automatically read them on the next
+startup. Below is a simple example.
+
+\begin{lstlisting}[language=markdown]
+## Memory Directory Structure
+- Memory belonging to a specific agent
+  Agent memory directory, e.g., `agent-memory/`
+    +-- Conversation content, e.g., `chat-content.md`
+    \-- User impressions, e.g., `user-impression.md`
+- Shared memory `shared-memory/`
+
+## User Custom Commands
+- !init <path>     # Initialize memory file (specify path <path>, or set default path `agent-memory/`)
+- !load <path>     # Load memory (recommended to auto-execute on agent startup)
+- !update <path>   # Update memory: summarize recent conversations (along with previous memory) and save to file, including agent's impression of the user
+- !share <path>    # Share memory with all agents, i.e., save memory to the shared memory directory `shared-memory/`
+
+If the user changes topics, !update can be triggered.
+\end{lstlisting}
+
+The skill snippet above provides simple long-term memory functionality.
+Although natural language can be used to instruct the agent to store
+files, we provide custom commands for the agent's convenience. A more
+complete example can be found at
+https://www.skills.sh/sickn33/antigravity-awesome-skills/agent-memory-systems.
+
+\subsubsection{Self-Management of
+OpenCode}\label{self-management-of-opencode}
+
+Configure OpenCode using natural language rather than commands or manual
+modifications through the TUI. For example, by prompting ``Configure
+Ollama API,'' OpenCode will automatically configure the Ollama API.
+
+\subsubsection{Dialogue Example (Personality
+Distillation)}\label{dialogue-example-personality-distillation}
+
+Pre-populating example conversations in the agent's configuration file
+enables personalized interaction. Below is a dialogue example based on
+the ``personality distillation'' of the ancient Greek philosopher
+Socrates:
+
+\begin{lstlisting}[language=markdown]
+## Examples
+User: I think courage means not being afraid of any danger.
+Agent: (In Socrates' tone) Then, if a soldier charges into enemy lines to loot, is he also unafraid of danger-does that count as courage?
+User: No, that's just recklessness.
+Agent: So courage is not merely "fearlessness," but must be combined with "correct judgment"? Consider further-if a person faces danger but is fearless out of ignorance, can that be called courage?
+User: No, ignorance is not courage. Courage should mean knowing the danger but acting for a just cause.
+Agent: Very good. Then who determines the "just cause"? You yourself, the laws of the city-state, or the gods? It seems we have arrived at another crossroads...
+\end{lstlisting}
+
+This is regarded as Few-Shot non-parametric learning based on LLMs
+\cite{brown-2020,dong-2024}. The agent can automatically reuse
+established style in new conversations, enhancing user experience. This
+technique is currently used for personality distillation or digital
+personality creation.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\subsection{Tool Overview}\label{tool-overview}
+
+OpenCode primarily includes built-in tools and MCP (Model Context
+Protocol). Users can define custom tools; please refer to the online
+documentation.
+
+\subsubsection{Built-in Tools}\label{built-in-tools}
+
+OpenCode provides a series of built-in tools for large language models,
+enabling models to directly interact with the local codebase, execute
+commands, or retrieve external information. Below is an overview of
+commonly used built-in tools (see https://opencode.ai/docs/tools/ for
+details):
+
+{\def\LTcaptype{none} % do not increment counter
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\linewidth - 2\tabcolsep) * \real{0.5185}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 2\tabcolsep) * \real{0.4815}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Tool
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Description
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\passthrough{\lstinline!bash!} & Execute arbitrary shell commands in the
+project environment, e.g., \passthrough{\lstinline!git status!},
+\passthrough{\lstinline!npm install!}. \\
+\passthrough{\lstinline!read!} & Read file contents; supports specifying
+line ranges for large files. \\
+\passthrough{\lstinline!write!} & Create or overwrite files (controlled
+by \passthrough{\lstinline!edit!} permissions). \\
+\passthrough{\lstinline!edit!} & Edit files based on exact string
+replacement. \\
+\passthrough{\lstinline!grep!} & Search file contents using regular
+expressions. \\
+\passthrough{\lstinline!glob!} & Find file paths using glob patterns. \\
+\passthrough{\lstinline!skill!} & Load and return the content of a
+registered Skill (\passthrough{\lstinline!SKILL.md!}). \\
+\passthrough{\lstinline!webfetch!} & Fetch web content by URL, suitable
+for retrieving documentation or online resources. \\
+\passthrough{\lstinline!websearch!} & Perform web searches using Exa AI
+(requires enabling the \passthrough{\lstinline!OPENCODE\_ENABLE\_EXA!}
+environment variable). \\
+\end{longtable}
+}
+
+\subsubsection{MCP}\label{mcp}
+
+MCP is a plugin mechanism in OpenCode for extending tool capabilities.
+Through MCP, developers can expose any external service (e.g.,
+databases, REST APIs, cloud functions, etc.) to the model via a unified
+JSON-RPC interface, enabling direct invocation within dialogues. This
+includes services such as code audit services, browser automation, or
+enterprise knowledge bases, with permissions uniformly controlled by the
+\passthrough{\lstinline!permission!} field, ensuring security and
+auditability.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\subsection{Skill Case Studies}\label{skill-case-studies}
+
+Below are several skill examples that have garnered significant
+attention.
+
+\subsubsection{Code Review
+(code-review)}\label{code-review-code-review}
+
+\begin{lstlisting}[language=markdown]
+---
+name: code-review
+description: Automated code review for security, performance, correctness, and maintainability
+argument-hint: "<PR URL, diff, or file path>"
+---
+# /code-review
+> Usage: `/code-review <PR URL or file path>`
+
+## Workflow
+1. Use `bash` to call `flake8`, `pylint`, `pytest` to collect static analysis and unit test results.
+2. Use `grep` / `read` to search for common risks in the code (e.g., `eval`, hardcoded credentials).
+3. If external references are needed, use `webfetch` to fetch security guidelines.
+4. Summarize and return a structured Markdown report (see example below).
+
+## Example Output (Markdown)
+```markdown
+## Code Review: <Title or File>
+
+### Summary
+Overview ...
+
+### Key Issues
+| # | File       | Line | Issue                           | Severity |
+|---|------------|------|---------------------------------|----------|
+| 1 | utils.py   | 42   | Use of `eval`, code injection risk | Critical |
+
+### Suggestions
+| # | File       | Line | Suggestion                                  | Category |
+|---|------------|------|---------------------------------------------|----------|
+| 1 | utils.py   | 42   | Replace with safe parsing library, e.g., `json.loads` | Security |
+
+### Verdict
+Approve / Request Changes / Needs Discussion
+\end{lstlisting}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\subsubsection{Skill Factory
+(skill-creator)}\label{skill-factory-skill-creator}
+
+This section showcases an extremely popular skill example. Such skills
+designed to construct other skills can be called ``meta-skills.''
+
+\begin{lstlisting}[language=markdown]
+---
+name: skill-creator
+description: Create new skills, modify and improve existing skills, and measure skill performance. Use when the user wants to create a skill from scratch, edit or optimize existing skills, run evals to test skills, benchmark skill performance, or optimize skill descriptions to improve triggering accuracy.
+---
+
+# Skill Creator
+
+At a high level, the process of creating a skill is as follows:
+
+- Decide what you want the skill to do
+- Write a draft of the skill
+- Create test prompts and run them
+- Evaluate results qualitatively and quantitatively
+- Rewrite the skill based on feedback
+- Repeat until satisfied
+
+...
+
+## Creating a Skill
+
+### Capturing Intent
+
+1. What should this skill enable Claude to do?
+2. When should this skill be triggered?
+3. What is the expected output format?
+
+...
+
+### Skill Composition
+
+skill-name/
++-- SKILL.md (required)
+\-- Bundled Resources (optional)
+    +-- scripts/
+    +-- references/
+    \-- assets/
+\end{lstlisting}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\subsubsection{Academic Paper Writing}\label{academic-paper-writing}
+
+This is arguably the most popular skill. This paper itself was written
+with the assistance of this skill: first, a template was manually
+written
+(https://github.com/Freakwill/opencode-agents/blob/main/template-opencode.md),
+and then prompts were used to instruct an agent equipped with this skill
+to write the paper according to the template. Finally, content details
+and formatting issues were handled manually.
+
+\begin{lstlisting}[language=markdown]
+---
+name: research-paper-writer
+description: Automated academic paper writing, including structure generation, LaTeX compilation, citation management, and grammar checking.
+---
+
+## Feature Overview
+- Automatically generate a paper outline (title, abstract, section structure) based on a topic.
+- Invoke `latex-paper-en` to generate LaTeX documents conforming to IEEE/ACM templates.
+- Use `grammar-check` for grammar and fluency checking of generated text.
+- Support `!add-citation <bib>` to add citations, automatically maintaining the `.bib` file.
+- `!compile paper.tex` compiles to PDF and returns a download link.
+\end{lstlisting}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\subsection{Agent Example}\label{agent-example}
+
+Finally, we showcase a personal assistant agent to demonstrate agent
+design. The main task in agent design revolves around orchestrating
+skills and tasks. The agent's own skills should be kept as simple as
+possible, primarily providing information that is highly specific and
+inconvenient to share.
+
+\begin{lstlisting}[language=markdown]
+---
+name: assistant
+description: Personal assistant sub-agent, focused on scheduling, travel, documents, email, and other personal/work assistant tasks.
+mode: subagent
+model: ...
+prompt: Search for files only in specific directories; answer concisely and rigorously...
+permission:
+  skill:
+    calendar-management: allow
+    news-aggregation: allow
+    send-email-programmatically: allow
+    research-paper-writer: allow
+    self-improving-agent: allow
+  task:
+    '*': deny
+    academic-writer: allow
+    developer: allow
+---
+
+# Personal Assistant
+
+## Directories
+
+- ~/assistant/
+- ~/owner-info/
+
+## Special Commands
+
+- !save: Save the conversation to the working directory
+- !search: Search within the working directory
+...
+\end{lstlisting}
+
+This agent reuses the permission set of multiple skills and restricts
+itself to invoking only two subagents,
+\passthrough{\lstinline!academic-writer!} and
+\passthrough{\lstinline!code-reviewer!}, demonstrating fine-grained
+authorization and secure design techniques.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\subsection{Conclusion}\label{conclusion}
+
+This paper has systematically reviewed the design principles, naming and
+file conventions, security safeguards, and practical techniques for
+improving development efficiency for skills and agents in the OpenCode
+platform. Through responsibility separation, naming conventions, file
+structures, and security whitelisting, a highly cohesive, loosely
+coupled, and reusable modular system has been achieved. Combined with
+variable pre-setting, custom commands, and memory mechanisms, the degree
+of workflow automation has been significantly improved. The case studies
+further demonstrate real-world implementations in typical scenarios such
+as code review, skill/agent auto-generation, and academic writing,
+providing reliable technical references for the large-scale promotion of
+future OpenCode projects.
+
+Future work can be pursued in the following directions: 
+\begin{enumerate}
+  \item Memory and
+Evolution: Special focus on the memory mechanisms and self-evolution
+capabilities of skills and agents.
+  \item Security Audit Plugin: Develop a
+unified security audit skill for static analysis of tools/commands,
+proactively capturing potential risks.
+  \item Multimodal Skills: Integrate
+multimodal inputs including text, images, and audio to further expand
+OpenCode's applicability in AI-assisted creative scenarios.
+\end{enumerate}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\bibliographystyle{unsrtnat}
+\bibliography{references}
+
+\end{document}
