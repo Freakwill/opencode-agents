@@ -21,7 +21,7 @@ OpenCode 是面向大模型的可编程协作平台【1,2】，其核心理念�
 2. 如何制定统一的命名与文件结构以便团队协作；
 3. 如何在开放式执行环境中保证安全性，防止恶意指令或资源泄露。
 
-本文围绕上述问题，结合 OpenCode 官方文档（2025 版）与项目经验，提出系统的设计原则与实现技巧，并通过具体案例进行说明。
+本文围绕上述问题，结合 OpenCode 官方文档与项目经验，提出系统的设计原则与实现技巧，并通过具体案例进行说明。
 
 ---
 
@@ -231,24 +231,24 @@ argument-hint: "<PR URL, diff, 或文件路径>"
 4. 汇总并返回结构化 Markdown 报告（见下方示例）。
 
 ## 示例输出（Markdown）
-```markdown
+
 ## Code Review: <标题或文件>
 
-### Summary
+### 总结
 概览 …
 
-### Critical Issues
+### 关键 Issues
 | # | File | Line | Issue | Severity |
 |---|------|------|-------|----------|
-| 1 | utils.py | 42 | 使用 `eval`，存在代码注入风险 | Critical |
+| 1 | utils.py | 42 | 使用 `eval`，存在代码注入风险 | 关键 |
 
-### Suggestions
+### 建议
 | # | File | Line | Suggestion | Category |
 |---|------|------|------------|----------|
 | 1 | utils.py | 42 | 替换为安全的解析库，如 `json.loads` | Security |
 
-### Verdict
-Approve / Request Changes / Needs Discussion
+### 裁决
+批准 / 请求修改 / 需讨论
 ```
 
 ---
@@ -307,18 +307,7 @@ skill-name/
 ---
 name: research-paper-writer
 description: 自动化学术论文写作，包括结构生成、LaTeX 编译、引用管理和语法检查。
-argument-hint: "<topic>"
-permission:
-  skill:
-    latex-paper-en: allow
-    grammar-check: allow
-    python-performance-optimization: allow
-metadata:
-  version: 1.0
-  author: kim
 ---
-# /research-paper-writer
-> 用法：`/research-paper-writer <topic>`
 
 ## 功能概述
 - 根据主题自动生成论文大纲（标题、摘要、章节结构）。
@@ -386,7 +375,7 @@ permission:
 
 ## 参考文献
 
-1. OpenCode 官方文档. https://opencode.ai/docs. (2025)
+1. OpenCode 官方文档. https://opencode.ai/docs.
 2. Team, LogNroll. "OpenCode. ai: The Open Source AI Coding Agent Revolutionizing Development| LogNroll." (2026).
 3. Agent Skills 平台. https://agentskills.io
 4. Skills.sh 平台. https://skills.sh/
