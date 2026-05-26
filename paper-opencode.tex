@@ -113,7 +113,7 @@
 
 \vspace{0.5cm}
 \noindent\textbf{Abstract}\hspace{0.5em} OpenCode, as an extensible programming platform
-designed for large language models, provides two core concepts:
+designed for large language models(LLMs), provides two core concepts:
 \textbf{Skill} (functional module) and \textbf{Agent} (task scheduler).
 Building on a review of the official OpenCode documentation, this paper
 systematically elaborates on the design principles, naming and file
@@ -314,7 +314,7 @@ maintaining declarative and machine-readable file properties.
 For production environments with stringent security requirements, we
 summarize the following four security principles in \autoref{tab:risks}. For daily work and
 learning, it is sufficient to set the searchable paths for agents, which
-ensures both safety and efficiency.
+ensures both safety and efficiency. For an in-depth study on security, see \cite{jiang2026sok,ling2026agent,liu2026malicious,schmotz2026}
 
 {\def\LTcaptype{table}
 \begin{longtable}[]{@{}
@@ -391,8 +391,7 @@ User: Generate a daily schedule !save plan.md
 Agent: A daily schedule has been generated and saved to plan.md.
 \end{lstlisting}
 
-OpenCode does support custom commands
-(\url{https://opencode.ai/docs/commands/}), but when defined in a skill/agent
+OpenCode does support custom commands(\url{https://opencode.ai/docs/commands/}), but when defined in a skill/agent
 configuration file, the command is exclusive to that specific
 skill/agent. Additionally, regular shell commands can be executed in the
 OpenCode-TUI, such as \passthrough{\lstinline'!echo "hello"'}. The
@@ -401,8 +400,7 @@ case, the TUI automatically switches to a simulated shell environment.
 The technique presented in this section merely facilitates operations
 and simplifies prompts by simulating shell commands.
 
-\subsection{Simple Agent Memory
-Implementation}\label{simple-agent-memory-implementation}
+\subsection{Simple Implementation of Agent Memory}\label{simple-agent-memory-implementation}
 
 LLMs themselves do not possess implicit recurrent memory units like
 RNNs (Recurrent Neural Networks); their ``memory'' is limited to the current context window. Agent
@@ -411,7 +409,7 @@ history into context but do not natively include long-term memory
 mechanisms. The technique for implementing such a mechanism is to set up
 a memory database, allowing the agent to record conversation summaries,
 store them in the database, and automatically read them on the next
-startup. Below is a simple example.
+startup\cite{alzubi2026,he2026memoryarena,li2026bmam,xia2026}. Below is a simple example.
 
 \begin{lstlisting}[language=markdown]
 ## Memory Directory Structure
@@ -436,15 +434,13 @@ files, we provide custom commands for the agent's convenience. A more
 complete example can be found at
 \url{https://www.skills.sh/sickn33/antigravity-awesome-skills/agent-memory-systems}.
 
-\subsection{Self-Management of
-OpenCode}\label{self-management-of-opencode}
+\subsection{Self-Management of OpenCode}\label{self-management-of-opencode}
 
 Configure OpenCode using natural language rather than commands or manual
 modifications through the TUI. For example, by prompting ``Configure
 Ollama API,'' OpenCode will automatically configure the Ollama API.
 
-\subsection{Dialogue Example (Personality
-Distillation)}\label{dialogue-example-personality-distillation}
+\subsection{Dialogue Example (Personality Distillation)}\label{dialogue-example-personality-distillation}
 
 Pre-populating example conversations in the agent's configuration file
 enables personalized interaction. Below is a dialogue example based on
@@ -461,8 +457,8 @@ User: No, ignorance is not courage. Courage should mean knowing the danger but a
 Agent: Very good. Then who determines the "just cause"? You yourself, the laws of the city-state, or the gods? It seems we have arrived at another crossroads...
 \end{lstlisting}
 
-This is regarded as Few-Shot non-parametric learning based on LLMs
-\cite{brown-2020,dong-2024}. The agent can automatically reuse
+This is regarded as few-shot non-parametric learning based on LLMs
+\cite{brown-2020,madotto2021few,dong-2024}. The agent can automatically reuse
 established style in new conversations, enhancing user experience. This
 technique is currently used for personality distillation or digital
 personality creation.
@@ -477,7 +473,7 @@ documentation.
 
 \subsection{Built-in Tools}\label{built-in-tools}
 
-OpenCode provides a series of built-in tools for large language models,
+OpenCode provides a series of built-in tools for LLMs,
 enabling models to directly interact with the local codebase, execute
 commands, or retrieve external information. Below is an overview of
 commonly used built-in tools (see \url{https://opencode.ai/docs/tools/} for
@@ -581,8 +577,7 @@ Approve / Request Changes / Needs Discussion
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
-\subsection{Skill Factory
-(skill-creator)}\label{skill-factory-skill-creator}
+\subsection{Skill Factory(skill-creator)}\label{skill-factory-skill-creator}
 
 This section showcases an extremely popular skill example. Such skills
 designed to construct other skills can be called ``meta-skills.''
@@ -722,7 +717,7 @@ future OpenCode projects.
 Future work can be pursued in the following directions: 
 \begin{enumerate}
   \item Memory and Evolution: Special focus on the memory mechanisms and self-evolution
-capabilities of skills and agents\cite{alzubi2026,xia2026}.
+capabilities of skills and agents.
   \item Security Audit Plugin: Develop a unified security audit skill for static analysis of tools/commands,
 proactively capturing potential risks.
   \item Multimodal Skills: Integrate multimodal inputs including text, images, and audio to further expand
