@@ -7,7 +7,7 @@
 ---
 
 **摘要**
-OpenCode 作为面向大型语言模型的可扩展编程平台，提供了**Skill**（功能模块）和**Agent**（任务调度器）两类核心概念。本文在对 OpenCode 官方文档的梳理基础上，系统阐述了skill与 agent 的设计原则、命名与文件规范、安全防护以及提升开发效率的实用技巧。通过若干典型案例（代码审阅、skill/agent 工厂、学术写作等），展示了在实际项目中如何实现高内聚、低耦合、可复用且安全的模块化开发。本文旨在为 OpenCode 开发者提供一套完整的工程实践指南，以加速skill/agent的研发与落地。
+OpenCode 作为面向大型语言模型的可扩展编程平台，提供了**Skill**（功能模块）和**Agent**（任务调度器）两类核心概念。本文在对 OpenCode 官方文档的梳理基础上，系统阐述了skill与 agent 的设计原则、命名与文件规范、安全防护以及提升开发效率的实用技巧。通过若干典型案例（代码审阅、skill/agent 工厂、学术写作等），展示了在实际项目中如何实现高内聚、低耦合、可复用且安全的模块化开发。本文旨在为 OpenCode (适用于其他AI Agent类软件) 开发者提供一套完整的工程实践指南，以加速skill/agent的研发与落地。
 
 **关键词**：OpenCode、Skill、Agent、设计原则、可复用性、安全性
 
@@ -35,6 +35,7 @@ OpenCode 是面向大模型的可编程协作平台【1,2】，其核心理念�
 | Skill | 完成单一的业务功能（如文件读取、网络请求、文本分析等）。 | 与模型无直接联系 |
 | Agent | 负责调度、记忆、上下文管理，将多个skill串联为工作流。 | 使用 frontmatter 声明依赖的 skill和subagent (见2.3小节) |
 
+Skill的设计对所有AI agent 类软件都是通用的，但agent的设计可能会有区别。
 OpenCode 将agents分为两类，一类是Primary，一类是Subagent。前者是不能被其他agent调用的。这可以初步避免agent相互调用导致的循环。
 
 > **原则**：Skill 只负责业务实现，不参与调度；Agent 只负责调度与记忆，不实现具体业务。此职责分离能够显著提升代码复用率与测试效率。
@@ -95,14 +96,17 @@ OpenCode 将agents分为两类，一类是Primary，一类是Subagent。前者�
 
 ### 2.4 安全性
 
-对于安全性要求严格的生产环境，我们总结下述四点安全原则。对于日常工作和学习，建议设置agent可搜索的路径，即可保证安全，还可提高效率。
+对于安全性要求严格的生产环境，我们总结下述五点安全原则，作为参考\cite{schmotz2025agent,schmotz2026}。对于日常工作和学习，建议设置agent可搜索的路径，即可保证安全，还可提高效率。
 
 | 风险 | 防护措施 |
 |------|----------|
-| 任意系统调用 | 在skill中显式声明可用工具，仅允许白名单命令；执行前使用沙箱并限制 `PATH`。 |
-| 数据泄露 | 对所有外部输入进行 JSON schema 验证；对敏感信息（如 API Key）加密存储。 |
-| 持久化攻击 | 禁止 `write` 操作写入除 `<DEFAULT_DIR>` 之外的路径；对 `edit` 进行文件存在性检查。 |
-| 交叉脚本注入 | 对脚本参数进行严格的转义与白名单校验，避免shell注入。 |
+|任意系统调用  | 在 Skill 中显式声明可用工具，仅允许白名单命令；执行前使用沙箱并限制 PATH。|
+|数据泄露 | 对所有外部输入进行 JSON Schema 验证；对敏感信息（如 API Key）加密存储；避免将 Secrets 注入 Prompt。|
+|持久化攻击 | 禁止 write 操作写入 <DEFAULT_DIR> 之外的路径；对 edit、delete 操作进行路径校验和文件存在性检查。|
+|提示词注入| 将用户输入、网页内容、RAG 检索结果视为不可信数据；禁止外部内容修改系统提示、权限或工具调用规则；高风险操作必须二次确认。|
+|Skill/工具注入|  Skill 不信任其他 Skill、网页或文件中提供的工具调用建议；工具参数必须经过 Schema 校验。|
+|权限(Permission)|  默认拒绝（deny-by-default）；Skill 仅申请最小权限（Least Privilege）；禁止动态修改自身权限。|
+
 
 > **原则**：始终在 skill 的入口层做一次安全审计，确保任何外部请求都经过严格校验后才进入业务逻辑。
 
@@ -115,10 +119,12 @@ OpenCode 将agents分为两类，一类是Primary，一类是Subagent。前者�
 为避免在多个skill中重复获取相同信息，可在agent的记忆中预置变量。例如：
 
 ```markdown
-!set language="python"
-!set openai_key="${ENCRYPTED_OPENAI_KEY}"
+# 设置变量
+- LANGUAGE: Python
+- API_KEY: <ENCRYPTED_API_KEY>
+- WORK_DIR: Work directory
 ```
-随后在任意 skill 中使用 `${language}`、`${openai_key}`，实现全局配置式的信息共享，提升维护效率。
+随后在任意 skill 中使用 `<LANGUAGE>`、`<API_KEY>`等，以提升维护效率。`<WORK_DIR>`通常用于设置agent的工作路径，实现对agent读写文件的范围的限制。
 
 ### 3.2 自定义命令
 
@@ -143,26 +149,27 @@ OpenCode确实可以自定义命令(https://opencode.ai/docs/commands/)，不过
 
 ### 3.3 简单的 Agent 记忆实现
 
-LLM 本身没有像 RNN 那样的隐式循环记忆单元，其“记忆”仅限于当前上下文窗口。OpenCode 这类 Agent 框架负责将会话历史组织成上下文，本身并不内置长时记忆机制。实现该机制的技巧是：设置一个记忆数据库，让agent记录下会话概要，存入库中，下一次启动自动读取。尽管用自然语言就可操纵agent来读写文件，但是出于方便我们为agent提供一些自定义命令。下面是一个简单实例。
+LLM 本身没有像 RNN 那样的隐式循环记忆单元，其“记忆”仅限于当前上下文窗口。OpenCode 这类 Agent 框架负责将会话历史组织成上下文，本身并不内置长时记忆机制。实现该机制的技巧是：设置一个记忆数据库，让agent记录下会话内容，甚至对用户人格层面的侧写，存入库中，下一次启动自动读取。同时，用户可以主动给与agent反馈，可持久影响agent的行为。尽管用自然语言就可操纵agent来读写文件，但是出于方便我们为agent提供一些自定义命令。下面是一个简单实例。
 
 ```markdown
 ## 设置记忆的目录结构
 - 属于特定agent的记忆
-  agent记忆目录, 如`agent-memory/`
-    ├─ 对话内容, 如`chat-content.md`
-    └─ 对用户的印象, 如`user-impression.md`
+  agent记忆目录, `agent-memory/`
+    ├─ 对话内容（或内容概要，关键对话）, `chat-content.md`
+    ├─ 对用户的印象, `user-impression.md`
+    └─ 用户的反馈, `user-feedback.md`
 - 共享记忆`shared-memory/`
 
 ## 用户自定义命令
 - !init <path>     # 初始化记忆文件（指定路径<path>，或设置默认路径`agent-memory/`）
 - !load <path>     # 读取记忆，建议在agent启动时自动执行。
-- !update <path>   # 更新记忆，将近期的对话（连同以往的记忆）进行总结存入文档，包括agent对用户的形象
+- !update <path>   # 更新记忆，将近期的对话（连同以往的记忆）进行总结存入文档，包括agent对用户的印象
 - !share <path>    # 将记忆共享给所有agent，即将记忆存入共享记忆目录`shared-memory/`
 
-如果用户改变话题，可触发!update。
+如果用户改变话题，可触发!update。当用户多次关注某个话题时，更新对用户的印象。
 ```
 
-上面的skill片段，提供了简单的长时记忆功能。在不微调LLM参数的情况下，初步实现Agent的自进化。更完备的案例见https://www.skills.sh/sickn33/antigravity-awesome-skills/agent-memory-systems。
+上面的skill片段，提供了简单的长时记忆功能，在不微调LLM参数的情况下，初步实现Agent的强化学习和自进化。更完备的案例见https://www.skills.sh/sickn33/antigravity-awesome-skills/agent-memory-systems。
 
 
 ### 3.4 OpenCode 自我管理
@@ -202,9 +209,9 @@ OpenCode 为大模型提供了一系列内置工具，帮助模型直接与本�
 | `edit` | 基于精确字符串替换的文件编辑。
 | `grep` | 使用正则表达式在文件内容中搜索。
 | `glob` | 基于 glob 模式查找文件路径。
-| `skill` | 加载并返回已注册的 Skill（`SKILL.md`）的内容。
 | `webfetch` | 按 URL 拉取网页内容，适用于获取文档或在线资源。
 | `websearch` | 使用 Exa AI 进行网络搜索（需启用 `OPENCODE_ENABLE_EXA` 环境变量）。
+| `skill` | 加载并返回已注册的 skills（`SKILL.md`）的内容。
 
 ### MCP
 
@@ -214,9 +221,11 @@ MCP是 OpenCode 用于扩展工具能力 的插件机制。通过 MCP，开发�
 
 ## 5. Skill 案例赏析
 
-下面展示几个关注度较高的skill实例。
+下面展示几个关注度较高的skill实例。可在平台`[x]`上搜索。
 
 ### 5.1 代码审阅（code‑review）
+
+这是一个非常经典的例子，适合作为读者学习skills的模板。
 
 ```markdown
 ---
@@ -388,3 +397,4 @@ permission:
 8. 作者创建的 agents. https://github.com/Freakwill/opencode-agents
 9. Brown, Tom, et al. "Language models are few-shot learners." Advances in neural information processing systems 33 (2020): 1877-1901.
 10. Dong, Qingxiu, et al. "A survey on in-context learning." Proceedings of the 2024 conference on empirical methods in natural language processing. 2024.
+11. More...

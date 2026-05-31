@@ -1,6 +1,7 @@
 \PassOptionsToPackage{hyphens}{url}
 \documentclass[]{article}
 
+\usepackage{graphicx}
 \usepackage{listings}
 \usepackage{xcolor}
 
@@ -94,10 +95,14 @@
 \setmonofont{Menlo}
 \setcounter{secnumdepth}{3}
 
+\newcommand{\qq}[1]{\passthrough{\lstinline'#1'}}
+\newcommand{\qe}[1]{\passthrough{\lstinline!#1!}}
+\newcommand{\myline}{\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}}
+
 % ---
 
 \title{\textbf{Design Principles and Practical Tips for Skills and Agents in OpenCode}}
-\author{Song Congwei \thanks{*Corresponding author: Williamxxoo@gmail.com}\\
+\author{Song Congwei \thanks{Corresponding author: william@bimsa.cn}\\
 Beijing Institute of Mathematical Sciences and Applications (BIMSA)\\
 Huairou District, Beijing}
 \date{}
@@ -106,8 +111,7 @@ Huairou District, Beijing}
 
 \maketitle
 
-\vspace{0.5cm}
-\noindent\textbf{Abstract}\hspace{0.5em} OpenCode, as an extensible programming platform
+\noindent\textbf{Abstract}\hspace{0.5em} \textbf{OpenCode}, as an extensible programming platform
 designed for large language models(LLMs), provides two core concepts:
 \textbf{Skill} (functional module) and \textbf{Agent} (task scheduler).
 Building on a review of the official OpenCode documentation, this paper
@@ -117,14 +121,14 @@ development efficiency for skills and agents. Through several
 representative cases (code review, skill/agent factory, academic
 writing, etc.), it demonstrates how to achieve highly cohesive, loosely
 coupled, reusable, and secure modular development in real-world
-projects. This paper aims to provide OpenCode developers with a
+projects. This paper aims to provide OpenCode (applicable to other agent-type software) developers with a
 comprehensive set of engineering practice guidelines to accelerate the
 development and deployment of skills and agents.
 
 \textbf{Keywords}: OpenCode, Skill, Agent, Design Principles,
 Reusability, Security
 
-\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+% \myline
 
 \section{Introduction}\label{sec:introduction}
 
@@ -134,7 +138,7 @@ achieve ``human-machine collaboration, tasks as services'' through
 Skills (specialized functional modules)
 \cite{agent-skills,anthropic-skills,clawhub,skill-fish,skills-sh,jiang2026,xu2026agent} and
 Agents (executors responsible for scheduling, memory, and context
-management) \cite{freakwill-agents,li2026single}. In practice, developers often face
+management) \cite{luo2025large,li2026single}. In practice, developers often face
 the following challenges:
 
 \begin{enumerate}
@@ -159,7 +163,7 @@ documentation with project experience, proposing
 systematic design principles and implementation techniques, and
 illustrating them through concrete examples.
 
-\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+% \myline
 
 \section{Design Principles}\label{sec:design-principles}
 
@@ -196,7 +200,7 @@ chaining multiple skills into a workflow. & Use frontmatter to declare
 dependent skills and subagents (see \autoref{sec:file-conventions}) \\
 \end{longtable}
 
-OpenCode divides agents into two categories: Primary Agents and
+The design of Skills is universal for all AI agent - type software, but the design of agents may vary. OpenCode divides agents into two categories: Primary Agents and
 Subagents. The former cannot be invoked by other agents, which
 preliminarily prevents circular calls between agents.
 
@@ -231,18 +235,12 @@ Example
 \endhead
 \bottomrule
 \endlastfoot
-Skill folder & lowercase + underscore/hyphen, verb phrase or agentless
-noun phrase & \passthrough{\lstinline!find-skills!},
-\passthrough{\lstinline!data-analysis!} \\
-Agent file & lowercase + underscore, noun or noun phrase &
-\passthrough{\lstinline!code\_reviewer.md!},
-\passthrough{\lstinline!socrates.md!} \\
+Skill folder & lowercase + underscore/hyphen, verb phrase or agentless noun phrase & \qe{find-skills}, \qe{data-analysis} \\
+Agent file & lowercase + underscore, noun or noun phrase & \qe{code\_reviewer.md}, \qe{socrates.md} \\
 \end{longtable}
 
 In practice, skill folder names still tend to use agent-bearing noun
-phrases (e.g., \passthrough{\lstinline!command-creator!},
-\passthrough{\lstinline!skill-creator!},
-\passthrough{\lstinline!skill-vetter!}), since skills can be regarded as
+phrases (e.g., \qe{command-creator}, \qe{skill-creator}, \qe{skill-vetter}), since skills can be regarded as
 agents independent of models and tools.
 
 \begin{quote}
@@ -307,9 +305,9 @@ maintaining declarative and machine-readable file properties.
 \subsection{Security}\label{security}
 
 For production environments with stringent security requirements, we
-summarize the following four security principles in \autoref{tab:risks}. For daily work and
+summarize the following five security principles in \autoref{tab:risks} as a reference. For daily work and
 learning, it is sufficient to set the searchable paths for agents, which
-ensures both safety and efficiency. For an in-depth study on security, see \cite{jiang2026sok,ling2026agent,liu2026malicious,schmotz2026}
+ensures both safety and efficiency. For an in-depth study on security, see \cite{schmotz2025agent,jiang2026sok,ling2026agent,liu2026malicious,schmotz2026}
 
 \begin{longtable}[]{@{}
   >{\raggedright\arraybackslash}p{(\linewidth - 2\tabcolsep) * \real{0.5532}}
@@ -327,16 +325,12 @@ Mitigation Measures
 \endhead
 \bottomrule
 \endlastfoot
-Arbitrary system calls & Explicitly declare available tools in the
-skill, allow only whitelisted commands; use sandboxing before execution
-and restrict \passthrough{\lstinline!PATH!}. \\
-Data leakage & Validate all external inputs with JSON schema; encrypt
-sensitive information (e.g., API keys) at rest. \\
-Persistence attacks & Prohibit \passthrough{\lstinline!write!}
-operations to paths other than \passthrough{\lstinline!<DEFAULT\_DIR>!};
-perform file existence checks for \passthrough{\lstinline!edit!}. \\
-Cross-script injection\cite{schmotz2026} & Perform strict escaping and whitelist
-validation on script parameters to prevent shell injection. \\
+ Arbitrary system calls & Explicitly declare available tools in the Skill and allow only whitelisted commands; use a sandbox and restrict PATH before execution. \\
+ Data leakage & Validate all external inputs against JSON Schema; encrypt sensitive information (e.g., API keys) when storing; avoid injecting secrets into prompts. \\
+ Persistent attacks & Prohibit write operations to paths outside \qe{<DEFAULT_DIR>}; perform path validation and file existence checks for edit and delete operations. \\
+ Prompt injection & Treat user inputs, web content, and RAG retrieval results as untrusted data; prevent external content from modifying system prompts, permissions, or tool invocation rules; require secondary confirmation for high-risk operations. \\
+ Skill/tool injection & Skills should not trust tool invocation suggestions from other Skills, web pages, or files; tool parameters must be validated against a Schema. \\
+ Permission & Adopt a deny-by-default policy; Skills should request only the least privilege; prohibit dynamic modification of their own permissions.
 \end{longtable}
 
 \begin{quote}
@@ -345,7 +339,7 @@ layer, ensuring that every external request is strictly validated before
 entering the business logic.
 \end{quote}
 
-\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+% \myline
 
 \section{Design Techniques}\label{design-techniques}
 
@@ -354,24 +348,25 @@ entering the business logic.
 To avoid repeatedly fetching the same information across multiple
 skills, variables can be preset in the agent's memory. For example:
 
-\begin{lstlisting}
-!set language="python"
-!set openai_key="${ENCRYPTED_OPENAI_KEY}"
+\begin{lstlisting}[language=markdown]
+## Variables
+- LANGUAGE: Python
+- API_KEY: <ENCRYPTED_API_KEY>
+- WORK_DIR: /path/to/workdir/
+
+The files should be saved in <WORK_DIR> by default.
 \end{lstlisting}
 
-Subsequently, \passthrough{\lstinline!$\{language\}!} and
-\passthrough{\lstinline!$\{openai\_key\}!} can be used in any skill,
-enabling global configuration-style information sharing and improving
-maintenance efficiency.
+Subsequently, use \qe{<LANGUAGE>}, \qe{<API_KEY>}, etc., in any skill to improve maintenance efficiency. \qe{<WORK_DIR>} is typically used to set the agent's working directory, thereby restricting the scope of the agent's file read and write operations.
 
 \subsection{Custom Commands}\label{sec:custom-commands}
 
 We design shell-style custom commands for skills/agents with the
-\passthrough{\lstinline"!"} prefix. For example:
+\qq{!} prefix. For example:
 
 \begin{lstlisting}[language=markdown]
 ## User Custom Commands
-!save <path>   : Save the latest conversation output (not necessarily displayed in TUI) to the specified path
+!save <path>   : Save the latest conversation output or its digest (not necessarily displayed in TUI) to the specified/default path
 !test          : Execute unit tests and return results
 !test save     : Chained commands
 !python        : Simulate REPL of Python
@@ -388,8 +383,8 @@ Agent: A daily schedule has been generated and saved to plan.md.
 OpenCode does support custom commands(\url{https://opencode.ai/docs/commands/}), but when defined in a skill/agent
 configuration file, the command is exclusive to that specific
 skill/agent. Additionally, regular shell commands can be executed in the
-OpenCode-TUI, such as \passthrough{\lstinline'!echo "hello"'}. The
-\passthrough{\lstinline'!'} must be entered at the beginning. In this
+OpenCode-TUI, such as \qe{!echo "hello"}. The
+\qe{!} must be entered at the beginning. In this
 case, the TUI automatically switches to a simulated shell environment.
 The technique presented in this section merely facilitates operations
 and simplifies prompts by simulating shell commands.
@@ -398,21 +393,21 @@ and simplifies prompts by simulating shell commands.
 
 LLMs themselves do not possess implicit recurrent memory units like
 RNNs (Recurrent Neural Networks); their ``memory'' is limited to the current context window. Agent
-softwares like OpenCode are responsible for organizing conversation
+frameworks like OpenCode are responsible for organizing conversation
 history into context but do not natively include long-term memory
 mechanisms. The technique for implementing such a mechanism is to set up
-a memory database, allowing the agent to record conversation summaries,
+a memory database, allowing the agent to record conversation summaries, even the profiling at the user's personality,
 store them in the database, and automatically read them on the next
-startup\cite{alzubi2026,he2026memoryarena,li2026bmam,xia2026}. 
-Although natural language can be used to instruct the agent to store
+startup\cite{alzubi2026,du2026survey,he2026memoryarena,li2026bmam}. Meanwhile, users can actively provide feedback to the agent, which can persistently influence the agent's behavior. See \autoref{fig:memory}. Although natural language can be used to instruct the agent to store
 files, we provide custom commands for the agent's convenience. Below is a simple example.
 
 \begin{lstlisting}[language=markdown]
 ## Memory Directory Structure
 - Memory belonging to a specific agent
   Agent memory directory, e.g., `agent-memory/`
-    +-- Conversation content, e.g., `chat-content.md`
-    \-- User impressions, e.g., `user-impression.md`
+    +-- Conversation content (Content summary, key dialogues), e.g., `chat-content.md`
+    +-- User impressions, e.g., `user-impression.md`
+    \-- User feedback, `user-feedback.md`
 - Shared memory `shared-memory/`
 
 ## User Custom Commands
@@ -421,10 +416,17 @@ files, we provide custom commands for the agent's convenience. Below is a simple
 - !update <path>  : Update memory: summarize recent conversations (along with previous memory) and save to file, including agent's impression of the user
 - !share <path>   : Share memory with all agents, i.e., save memory to the shared memory directory `shared-memory/`
 
-If the user changes topics, !update can be triggered.
+If the user changes topics, !update can be triggered automatically. When the user pays attention to a certain topic multiple times, update the impression of the user.
 \end{lstlisting}
 
-The skill snippet above provides simple long-term memory functionality. It initially realizes self‑evolution of agents without fine‑tuning the LLM parameters. A more complete example can be found at \cite{agent-memory-systems}.
+The skill snippet above provides simple long-term memory functionality. Without fine‑tuning the LLM parameters, this offers a preliminary approach to reinforcement learning and self‑evolution for the agent\cite{wang2025reinforcement,xia2026}. A more complete example can be found at \cite{agent-memory-systems,hermes-agent}.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.95\textwidth]{memory.png}
+  \caption{The architecture diagram of memory system}
+  \label{fig:memory}
+\end{figure}
 
 \subsection{Self-Management of OpenCode}\label{sec:self-management-of-opencode}
 
@@ -455,7 +457,7 @@ established style in new conversations, enhancing user experience. This
 technique is currently used for personality distillation or digital
 personality creation.
 
-\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+% \myline
 
 \section{Tool Overview}\label{sec:tool-overview}
 
@@ -485,25 +487,25 @@ Description
 \endhead
 \bottomrule
 \endlastfoot
-\passthrough{\lstinline!bash!} & Execute arbitrary shell commands in the
-project environment, e.g., \passthrough{\lstinline!git status!},
-\passthrough{\lstinline!npm install!}. \\
-\passthrough{\lstinline!read!} & Read file contents; supports specifying
+\qe{bash} & Execute arbitrary shell commands in the
+project environment, e.g., \qe{git status},
+\qe{npm install}. \\
+\qe{read} & Read file contents; supports specifying
 line ranges for large files. \\
-\passthrough{\lstinline!write!} & Create or overwrite files (controlled
-by \passthrough{\lstinline!edit!} permissions). \\
-\passthrough{\lstinline!edit!} & Edit files based on exact string
+\qe{write} & Create or overwrite files (controlled
+by \qe{edit} permissions). \\
+\qe{edit} & Edit files based on exact string
 replacement. \\
-\passthrough{\lstinline!grep!} & Search file contents using regular
+\qe{grep} & Search file contents using regular
 expressions. \\
-\passthrough{\lstinline!glob!} & Find file paths using glob patterns. \\
-\passthrough{\lstinline!skill!} & Load and return the content of a
-registered Skill (\passthrough{\lstinline!SKILL.md!}). \\
-\passthrough{\lstinline!webfetch!} & Fetch web content by URL, suitable
+\qe{glob} & Find file paths using glob patterns. \\
+\qe{webfetch} & Fetch web content by URL, suitable
 for retrieving documentation or online resources. \\
-\passthrough{\lstinline!websearch!} & Perform web searches using Exa AI
-(requires enabling the \passthrough{\lstinline!OPENCODE\_ENABLE\_EXA!}
+\qe{websearch} & Perform web searches using Exa AI
+(requires enabling the \qe{OPENCODE\_ENABLE\_EXA}
 environment variable). \\
+\qe{skill} & Load and return the content of a
+registered Skill (\qe{SKILL.md}). \\
 \end{longtable}
 
 \subsection{MCP}\label{sec:mcp}
@@ -514,24 +516,27 @@ databases, REST APIs, cloud functions, etc.) to the model via a unified
 JSON-RPC interface, enabling direct invocation within dialogues. This
 includes services such as code audit services, browser automation, or
 enterprise knowledge bases, with permissions uniformly controlled by the
-\passthrough{\lstinline!permission!} field, ensuring security and
+\qe{permission!} field, ensuring security and
 auditability.
 
-\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+% \myline
 
 \section{Skill Case Studies}\label{sec:skill-case-studies}
 
 Below are several skill examples that have garnered significant
-attention.
+attention. You can search for them on platform \cite{skills-sh}.
 
 \subsection{Code Review}\label{sec:code-review}
+
+This is a very classic example and serves as a suitable template for readers learning about skills.
 
 \begin{lstlisting}[language=markdown]
 ---
 name: code-review
-description: Automated code review for security, performance, correctness, and maintainability
+description: Review code changes for security, performance, and correctness. Trigger with a PR URL or diff, "review this before I merge", "is this code safe?", or when checking a change for N+1 queries, injection risks, missing edge cases, or error handling gaps.
 argument-hint: "<PR URL, diff, or file path>"
 ---
+
 # /code-review
 > Usage: `/code-review <PR URL or file path>`
 
@@ -562,7 +567,7 @@ Overview ...
 Approve / Request Changes / Needs Discussion
 \end{lstlisting}
 
-\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+% \myline
 
 \subsection{Skill Factory}\label{sec:skill-factory-skill-creator}
 
@@ -572,12 +577,12 @@ designed to construct other skills can be called ``meta-skills.''
 \begin{lstlisting}[language=markdown]
 ---
 name: skill-creator
-description: Create new skills, modify and improve existing skills, and measure skill performance. Use when the user wants to create a skill from scratch, edit or optimize existing skills, run evals to test skills, benchmark skill performance, or optimize skill descriptions to improve triggering accuracy.
+description: Create new skills, modify and improve existing skills, and measure skill performance. Use when users want to create a skill from scratch, edit, or optimize an existing skill, run evals to test a skill, benchmark skill performance with variance analysis, or optimize a skill's description for better triggering accuracy.
 ---
 
 # Skill Creator
 
-At a high level, the process of creating a skill is as follows:
+At a high level, the process of creating a skill goes like this:
 
 - Decide what you want the skill to do
 - Write a draft of the skill
@@ -608,7 +613,7 @@ skill-name/
     \-- assets/
 \end{lstlisting}
 
-\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+% \myline
 
 \subsection{Academic Paper Writing}\label{sec:academic-paper-writing}
 
@@ -622,8 +627,10 @@ and formatting issues were handled manually.
 \begin{lstlisting}[language=markdown]
 ---
 name: research-paper-writer
-description: Automated academic paper writing, including structure generation, LaTeX compilation, citation management, and grammar checking.
+description: Creates formal academic research papers following IEEE/ACM formatting standards with proper structure, citations, and scholarly writing style. Use when the user asks to write a research paper, academic paper, or conference paper on any topic.
 ---
+
+This skill guides the creation of formal academic research papers that ...
 
 ## Feature Overview
 - Automatically generate a paper outline (title, abstract, section structure) based on a topic.
@@ -633,7 +640,7 @@ description: Automated academic paper writing, including structure generation, L
 - `!compile paper.tex` compiles to PDF and returns a download link.
 \end{lstlisting}
 
-\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+% \myline
 
 \section{Agent Example}\label{agent-example}
 
@@ -679,11 +686,11 @@ permission:
 
 This agent reuses the permission set of multiple skills and restricts
 itself to invoking only two subagents,
-\passthrough{\lstinline!academic-writer!} and
-\passthrough{\lstinline!code-reviewer!}, demonstrating fine-grained
+\qe{academic-writer} and
+\qe{code-reviewer}, demonstrating fine-grained
 authorization and secure design techniques.
 
-\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+% \myline
 
 \section{Conclusion}\label{conclusion}
 
@@ -710,7 +717,7 @@ proactively capturing potential risks.
 OpenCode's applicability in AI-assisted creative scenarios.
 \end{enumerate}
 
-\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+% \myline
 
 \bibliographystyle{unsrtnat}
 \bibliography{references}
