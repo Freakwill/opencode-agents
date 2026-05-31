@@ -5,14 +5,11 @@
 \usepackage{xcolor}
 
 \lstdefinelanguage{Markdown}{
-    % 特殊字符作为关键字
     alsoletter={\#,\*,\[,\],\(,\),\!,\`,>,---},
     morekeywords={[1]\#,\#\#,\#\#\#,\#\#\#\#,\*,\*\*,\-\,\,,\`,\`\`\`},
     morekeywords={[2]!,\[,\],\(,\)},
     sensitive=false,
-    % 注释
     morecomment=[s]{<!--}{-->},
-    % 字符串（行内代码）
     morestring=[b]`,
     morestring=[b]{``},
 }
@@ -49,10 +46,6 @@
 \fi
 % Use upquote if available, for straight quotes in verbatim environments
 \IfFileExists{upquote.sty}{\usepackage{upquote}}{}
-\IfFileExists{microtype.sty}{% use microtype if available
-  \usepackage[]{microtype}
-  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
-}{}
 \makeatletter
 \@ifundefined{KOMAClassName}{% if non-KOMA class
   \IfFileExists{parskip.sty}{%
@@ -65,8 +58,8 @@
 \makeatother
 \usepackage{listings}
 \newcommand{\passthrough}[1]{#1}
-\lstset{defaultdialect=[5.3]Lua}
-\lstset{defaultdialect=[x86masm]Assembler}
+% \lstset{defaultdialect=[5.3]Lua}
+% \lstset{defaultdialect=[x86masm]Assembler}
 \usepackage{longtable,booktabs,array}
 \newcounter{none} % for unnumbered tables
 \usepackage{calc} % for calculating minipage widths
@@ -104,7 +97,9 @@
 % ---
 
 \title{\textbf{Design Principles and Practical Tips for Skills and Agents in OpenCode}}
-\author{Song Congwei\\Beijing Institute of Mathematical Sciences and Applications (BIMSA)\\Huairou District, Beijing}
+\author{Song Congwei \thanks{*Corresponding author: Williamxxoo@gmail.com}\\
+Beijing Institute of Mathematical Sciences and Applications (BIMSA)\\
+Huairou District, Beijing}
 \date{}
 
 \begin{document}
@@ -131,7 +126,7 @@ Reusability, Security
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
-\section{Introduction}\label{introduction}
+\section{Introduction}\label{sec:introduction}
 
 OpenCode is a programmable collaboration platform for large language
 models \cite{opencode-docs,lognroll-2026}. Its core philosophy is to
@@ -143,13 +138,17 @@ management) \cite{freakwill-agents,li2026single}. In practice, developers often 
 the following challenges:
 
 \begin{enumerate}
-\tightlist
+\item
+  How to establish unified naming and file structures to facilitate team
+  collaboration;
 \item
   How to maintain good maintainability and reusability of skills and
   agents while preserving functional completeness;
 \item
-  How to establish unified naming and file structures to facilitate team
-  collaboration;
+  How to enable self-evolution and self-improvement of skills, allowing
+  agents to iteratively refine their own capabilities based on feedback,
+  usage patterns, and performance metrics, while maintaining stability
+  and avoiding unintended behavioral drift.
 \item
   How to ensure security in an open execution environment, preventing
   malicious instructions or resource leaks.
@@ -162,16 +161,15 @@ illustrating them through concrete examples.
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
-\section{Design Principles}\label{design-principles}
+\section{Design Principles}\label{sec:design-principles}
 
 In this section, we will mainly introduce the fundamental principles of designing skills and agents. For a more in-depth understanding, please refer to \cite{xu2026agent}.
 
 \subsection{Responsibility
-Separation}\label{responsibility-separation}
+Separation}\label{sec:responsibility-separation}
 
 The difference between a skill and an agent lies not mainly in content, but in responsibilities. Please see \autoref{tab:responsibility}.
 
-{\def\LTcaptype{table}
 \begin{longtable}[]{@{}
   >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.1552}}
   >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3793}}
@@ -195,9 +193,8 @@ Skill & Perform a single business function (e.g., file reading, network
 requests, text analysis). & No direct coupling with the model \\
 Agent & Responsible for scheduling, memory, and context management,
 chaining multiple skills into a workflow. & Use frontmatter to declare
-dependent skills and subagents (see Section 2.3) \\
+dependent skills and subagents (see \autoref{sec:file-conventions}) \\
 \end{longtable}
-}
 
 OpenCode divides agents into two categories: Primary Agents and
 Subagents. The former cannot be invoked by other agents, which
@@ -211,11 +208,10 @@ responsibilities significantly improves code reuse rates and testing
 efficiency.
 \end{quote}
 
-\subsection{Naming Conventions}\label{naming-conventions}
+\subsection{Naming Conventions}\label{sec:naming-conventions}
 
 In \autoref{tab:naming}, we propose naming the skills and the agents.
 
-{\def\LTcaptype{table}
 \begin{longtable}[]{@{}
   >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.1573}}
   >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.4157}}
@@ -242,7 +238,6 @@ Agent file & lowercase + underscore, noun or noun phrase &
 \passthrough{\lstinline!code\_reviewer.md!},
 \passthrough{\lstinline!socrates.md!} \\
 \end{longtable}
-}
 
 In practice, skill folder names still tend to use agent-bearing noun
 phrases (e.g., \passthrough{\lstinline!command-creator!},
@@ -256,7 +251,7 @@ avoid camelCase or spaces, and ensure compatibility across Linux/macOS
 file systems.
 \end{quote}
 
-\subsection{File Conventions}\label{file-conventions}
+\subsection{File Conventions}\label{sec:file-conventions}
 
 \begin{enumerate}
 \item
@@ -316,7 +311,6 @@ summarize the following four security principles in \autoref{tab:risks}. For dai
 learning, it is sufficient to set the searchable paths for agents, which
 ensures both safety and efficiency. For an in-depth study on security, see \cite{jiang2026sok,ling2026agent,liu2026malicious,schmotz2026}
 
-{\def\LTcaptype{table}
 \begin{longtable}[]{@{}
   >{\raggedright\arraybackslash}p{(\linewidth - 2\tabcolsep) * \real{0.5532}}
   >{\raggedright\arraybackslash}p{(\linewidth - 2\tabcolsep) * \real{0.4468}}@{}}
@@ -344,7 +338,6 @@ perform file existence checks for \passthrough{\lstinline!edit!}. \\
 Cross-script injection\cite{schmotz2026} & Perform strict escaping and whitelist
 validation on script parameters to prevent shell injection. \\
 \end{longtable}
-}
 
 \begin{quote}
 \textbf{Principle}: Always conduct a security audit at the skill's entry
@@ -356,7 +349,7 @@ entering the business logic.
 
 \section{Design Techniques}\label{design-techniques}
 
-\subsection{Variable Pre-setting}\label{variable-pre-setting}
+\subsection{Variable Pre-setting}\label{sec:variable-pre-setting}
 
 To avoid repeatedly fetching the same information across multiple
 skills, variables can be preset in the agent's memory. For example:
@@ -371,7 +364,7 @@ Subsequently, \passthrough{\lstinline!$\{language\}!} and
 enabling global configuration-style information sharing and improving
 maintenance efficiency.
 
-\subsection{Custom Commands}\label{custom-commands}
+\subsection{Custom Commands}\label{sec:custom-commands}
 
 We design shell-style custom commands for skills/agents with the
 \passthrough{\lstinline"!"} prefix. For example:
@@ -381,6 +374,7 @@ We design shell-style custom commands for skills/agents with the
 !save <path>   : Save the latest conversation output (not necessarily displayed in TUI) to the specified path
 !test          : Execute unit tests and return results
 !test save     : Chained commands
+!python        : Simulate REPL of Python
 \end{lstlisting}
 
 To distinguish them from actual shell commands, they can be written at
@@ -395,12 +389,12 @@ OpenCode does support custom commands(\url{https://opencode.ai/docs/commands/}),
 configuration file, the command is exclusive to that specific
 skill/agent. Additionally, regular shell commands can be executed in the
 OpenCode-TUI, such as \passthrough{\lstinline'!echo "hello"'}. The
-\passthrough{\lstinline"!"} must be entered at the beginning. In this
+\passthrough{\lstinline'!'} must be entered at the beginning. In this
 case, the TUI automatically switches to a simulated shell environment.
 The technique presented in this section merely facilitates operations
 and simplifies prompts by simulating shell commands.
 
-\subsection{Simple Implementation of Agent Memory}\label{simple-agent-memory-implementation}
+\subsection{Simple Implementation of Agent Memory}\label{sec:agent-memory}
 
 LLMs themselves do not possess implicit recurrent memory units like
 RNNs (Recurrent Neural Networks); their ``memory'' is limited to the current context window. Agent
@@ -409,7 +403,9 @@ history into context but do not natively include long-term memory
 mechanisms. The technique for implementing such a mechanism is to set up
 a memory database, allowing the agent to record conversation summaries,
 store them in the database, and automatically read them on the next
-startup\cite{alzubi2026,he2026memoryarena,li2026bmam,xia2026}. Below is a simple example.
+startup\cite{alzubi2026,he2026memoryarena,li2026bmam,xia2026}. 
+Although natural language can be used to instruct the agent to store
+files, we provide custom commands for the agent's convenience. Below is a simple example.
 
 \begin{lstlisting}[language=markdown]
 ## Memory Directory Structure
@@ -428,19 +424,15 @@ startup\cite{alzubi2026,he2026memoryarena,li2026bmam,xia2026}. Below is a simple
 If the user changes topics, !update can be triggered.
 \end{lstlisting}
 
-The skill snippet above provides simple long-term memory functionality.
-Although natural language can be used to instruct the agent to store
-files, we provide custom commands for the agent's convenience. A more
-complete example can be found at
-\url{https://www.skills.sh/sickn33/antigravity-awesome-skills/agent-memory-systems}.
+The skill snippet above provides simple long-term memory functionality. It initially realizes self‑evolution of agents without fine‑tuning the LLM parameters. A more complete example can be found at \cite{agent-memory-systems}.
 
-\subsection{Self-Management of OpenCode}\label{self-management-of-opencode}
+\subsection{Self-Management of OpenCode}\label{sec:self-management-of-opencode}
 
 Configure OpenCode using natural language rather than commands or manual
 modifications through the TUI. For example, by prompting ``Configure
-Ollama API,'' OpenCode will automatically configure the Ollama API.
+Ollama API'', OpenCode will automatically configure the Ollama API. Readers can find the skill that implements this functionality in \cite{freakwill-agents}.
 
-\subsection{Dialogue Example (Personality Distillation)}\label{dialogue-example-personality-distillation}
+\subsection{Dialogue Example (Personality Distillation)}\label{sec:dialogue-example}
 
 Pre-populating example conversations in the agent's configuration file
 enables personalized interaction. Below is a dialogue example based on
@@ -465,27 +457,24 @@ personality creation.
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
-\section{Tool Overview}\label{tool-overview}
+\section{Tool Overview}\label{sec:tool-overview}
 
 OpenCode primarily includes built-in tools and MCP (Model Context
 Protocol). Users can define custom tools; please refer to the online
 documentation.
 
-\subsection{Built-in Tools}\label{built-in-tools}
+\subsection{Built-in Tools}\label{sec:built-in-tools}
 
 OpenCode provides a series of built-in tools for LLMs,
 enabling models to directly interact with the local codebase, execute
-commands, or retrieve external information. Below is an overview of
+commands, or retrieve external information. \autoref{tab:tools} is an overview of
 commonly used built-in tools (see \url{https://opencode.ai/docs/tools/} for
-details):
+details).
 
-{\def\LTcaptype{table}
 \begin{longtable}[]{@{}
   >{\raggedright\arraybackslash}p{(\linewidth - 2\tabcolsep) * \real{0.5185}}
   >{\raggedright\arraybackslash}p{(\linewidth - 2\tabcolsep) * \real{0.4815}}@{}}
-\caption{Built-in tools in OpenCode}
-\label{tab:tools}
-\\
+\caption{Built-in tools in OpenCode}\label{tab:tools}\\
 \toprule
 \begin{minipage}[b]{\linewidth}\raggedright
 Tool
@@ -516,9 +505,8 @@ for retrieving documentation or online resources. \\
 (requires enabling the \passthrough{\lstinline!OPENCODE\_ENABLE\_EXA!}
 environment variable). \\
 \end{longtable}
-}
 
-\subsection{MCP}\label{mcp}
+\subsection{MCP}\label{sec:mcp}
 
 MCP is a plugin mechanism in OpenCode for extending tool capabilities.
 Through MCP, developers can expose any external service (e.g.,
@@ -531,13 +519,12 @@ auditability.
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
-\section{Skill Case Studies}\label{skill-case-studies}
+\section{Skill Case Studies}\label{sec:skill-case-studies}
 
 Below are several skill examples that have garnered significant
 attention.
 
-\subsection{Code Review
-(code-review)}\label{code-review-code-review}
+\subsection{Code Review}\label{sec:code-review}
 
 \begin{lstlisting}[language=markdown]
 ---
@@ -577,7 +564,7 @@ Approve / Request Changes / Needs Discussion
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
-\subsection{Skill Factory(skill-creator)}\label{skill-factory-skill-creator}
+\subsection{Skill Factory}\label{sec:skill-factory-skill-creator}
 
 This section showcases an extremely popular skill example. Such skills
 designed to construct other skills can be called ``meta-skills.''
@@ -623,12 +610,11 @@ skill-name/
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
-\subsection{Academic Paper Writing}\label{academic-paper-writing}
+\subsection{Academic Paper Writing}\label{sec:academic-paper-writing}
 
 This is arguably the most popular skill. This paper itself was written
 with the assistance of this skill: first, a template was manually
-written
-(\url{https://github.com/Freakwill/opencode-agents/blob/main/template-opencode.md}),
+written(\url{https://github.com/Freakwill/opencode-agents/blob/main/template-opencode.md}),
 and then prompts were used to instruct an agent equipped with this skill
 to write the paper according to the template. Finally, content details
 and formatting issues were handled manually.
