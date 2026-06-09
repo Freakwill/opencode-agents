@@ -1,0 +1,26 @@
+{
+  "skill_name": "optimization-algorithm",
+  "evals": [
+    {
+      "id": 1,
+      "name": "custom-optimizer-design",
+      "prompt": "I'm working on a large language model training project and finding that AdamW converges too slowly. I need a new optimizer that combines ideas from Lion (sign-based updates) with adaptive learning rates like RMSProp. Can you help me design this optimizer, implement it in PyTorch, and explain the convergence properties?",
+      "expected_output": "A PyTorch optimizer implementation with sign-based + adaptive LR mechanism, documentation of update rule, and discussion of convergence behavior.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "lp-dual-analysis",
+      "prompt": "I have a production scheduling linear program with 2000 variables and 500 constraints. The simplex method is too slow. I want to try a decomposition approach — maybe Dantzig-Wolfe or Benders. Can you analyze my problem structure, recommend the best approach, and implement a column generation skeleton in Python using PuLP or OR-Tools?",
+      "expected_output": "Analysis of LP structure, recommended decomposition approach, and Python implementation of column generation for the problem.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "arxiv-paper-algorithm-implementation",
+      "prompt": "Search arXiv for the latest papers on 'machine learning optimization algorithm 2025' in cs.LG and stat.ML categories. Read the top 2 papers, identify a novel optimization algorithm they propose, and implement it in Python. Then benchmark it against AdamW on a simple neural network training task (2-layer MLP on synthetic data). Report convergence curves and timing.",
+      "expected_output": "arXiv paper summaries, code implementing the novel algorithm, benchmark comparison with AdamW including convergence plots.",
+      "files": []
+    }
+  ]
+}
